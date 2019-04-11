@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:orientation="vertical">
+    <android.support.v7.widget.Toolbar
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/colorMain"
+        app:contentInsetStart="0dp"
+        android:minHeight="?android:attr/actionBarSize"
+        android:layout_gravity="center">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_marginLeft="10dp"
+            android:layout_marginRight="10dp"
+            android:gravity="center_vertical">
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_chevron_left_black_24dp"
+                android:visibility="invisible"
+                android:layout_centerVertical="true" />
+            <TextView
+                android:id="@+id/group_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#fff"
+                android:text="@string/title_group"
+                android:textSize="@dimen/text_size_big"
+                android:visibility="visible"
+                android:layout_centerVertical="true"
+                android:layout_centerHorizontal="true"/>
+            <ImageView
+                android:id="@+id/group_menu"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:src="@drawable/ic_add_circle_black_24dp"
+                android:layout_alignParentRight="true"
+                android:layout_centerVertical="true"/>
+        </RelativeLayout>
+    </android.support.v7.widget.Toolbar>
+
+    <LinearLayout
+        android:id="@+id/group_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginTop="5dp"
+        android:layout_marginLeft="10dp"
+        android:layout_marginBottom="5dp"
+        android:layout_marginRight="10dp"
+        android:gravity="center"
+        android:background="@drawable/shape_box">
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/mine_search"
+            android:gravity="center"
+            android:layout_gravity="center"
+            android:textSize="@dimen/btn_text_size_small"
+            android:padding="5dp"
+            android:drawableLeft="@drawable/ic_search_black_24dp" />
+    </LinearLayout>
+
+    <com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView
+        android:id="@+id/group_list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+    </com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView>
+
+</LinearLayout>

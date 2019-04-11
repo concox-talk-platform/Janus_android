@@ -1,0 +1,49 @@
+<resources>
+    <string name="app_name">几米对讲</string>
+    <string name="title_group">群组</string>
+    <string name="title_Mine">我的</string>
+    <string name="title_quit">退出</string>
+
+    <string name="quit_tip">再按一次退出程序</string>
+
+    <!--recyclerPull-->
+    <string name="recycler_pull_loading">正在加载...</string>
+    <string name="recycler_pull_done">已经加载完</string>
+
+    <!--loginActivity-->
+    <string name="login_account">请输入账号</string>
+    <string name="login_password">请输入密码</string>
+    <string name="login_confirm_password">请输入确认密码</string>
+    <string name="login_login">登录</string>
+    <string name="login_register">注册</string>
+    <string name="login_go_register">去注册</string>
+    <string name="login_go_login">去登录</string>
+    <string name="login_inconsistent_tips">两次输入的密码不一致</string>
+    <string name="login_empty_tips">输入不能为空</string>
+    <string name="login_register_success_tips">注册成功</string>
+    <string name="login_login_success_tips">登录成功</string>
+
+    <!--toolBar-->
+    <string name="toolbar_commit">确定</string>
+
+    <!--mine-->
+    <string name="mine_search">搜索</string>
+    <string name="mine_add_friend">添加好友</string>
+
+    <!--group-->
+    <string name="search_str_add_group">加入群组</string>
+    <string name="search_str_added_group">已加入</string>
+
+    <!--search-->
+    <string name="search_str_friend">搜索好友</string>
+    <string name="search_str_add_friend">添加好友</string>
+    <string name="search_str_added_friend">已添加</string>
+    <string name="search_str_group">搜索群组</string>
+
+    <string name="request_data_null_tips">请求数据为空</string>
+
+    <!--newGroup-->
+    <string name="new_group_str_create">创建群组</string>
+    <string name="new_group_str_create_success">创建群组成功</string>
+
+</resources>

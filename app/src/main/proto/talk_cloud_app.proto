@@ -1,0 +1,315 @@
+syntax = "proto3";
+
+package talk_cloud;
+
+import "talk_cloud_model.proto";
+
+
+service TalkCloud {
+    // 注册
+    rpc AppRegister (AppRegReq) returns (AppRegRsp) {
+    }
+    rpc DeviceRegister (DeviceRegReq) returns (DeviceRegRsp) {
+    }
+    rpc Login (LoginReq) returns (LoginRsp) {
+    }
+    rpc Logout (LogoutReq) returns (LogoutRsp) {
+    }
+
+    // 好友管理
+    rpc AddFriend (FriendNewReq) returns (FriendNewRsp) {
+    }
+    rpc DelFriend (FriendDelReq) returns (FriendDelRsp) {
+    }
+    rpc GetFriendList (FriendsReq) returns (FriendsRsp) {
+    }
+    rpc SearchUserByKey (UserSearchReq) returns (UserSearchRsp) {
+    }
+
+    // 组管理
+    rpc CreateGroup (CreateGroupReq) returns (CreateGroupResp) {
+    };
+    rpc JoinGroup (GrpUserAddReq) returns (GrpUserAddRsp) {
+    }
+    rpc RemoveGrpUser (GrpUserDelReq) returns (GrpUserDelRsp) {
+    }
+    rpc ExitGrp (UserExitReq) returns (UserExitRsp) {
+    }
+    rpc RemoveGrp (GroupDelReq) returns (GroupDelRsp) {
+    }
+    rpc GetGroupList (GrpListReq) returns (GroupListRsp) {
+    }
+    rpc SearchGroup (GrpSearchReq) returns (GroupListRsp) {
+    }
+
+    // 离线消息拉取
+    rpc AddMsg (MsgNewReq) returns (MsgNewRsp) {
+    }
+    rpc GetMsg (MsgReq) returns (MsgRsp) {
+    }
+    rpc SetMsgStat (MsgStatReq) returns (MsgStatRsp) {
+    }
+    rpc DelMsg (MsgDelReq) returns (MsgDelRsp) {
+    }
+}
+
+/*************** Register ***************/
+// 头部信息
+message Head {
+    string version = 1; // 主版本号
+    string sub_version = 2; // 子版本号
+    int32 timestamp = 3; // 时间戳
+}
+
+// App注册请求
+message AppRegReq {
+    Head head = 1;
+    string name = 2;
+    string password = 3;
+}
+
+// App注册响应
+message AppRegRsp {
+    int32 id = 1;
+    string userName = 2;
+    Result res = 3;
+}
+
+// Device注册请求
+message DeviceRegReq {
+    int32 account_id = 1; // 管理账户ID
+    string device_list = 2; // IMEI列表
+}
+
+// Device注册响应
+message DeviceRegRsp {
+    Result res = 1;
+}
+
+// 登录请求
+message LoginReq {
+    Head head = 1;
+    string name = 2;
+    string passwd = 3;
+}
+
+message LoginRsp {
+    Member userInfo = 1;
+    repeated FriendRecord friend_list = 2;
+    repeated GroupInfo group_list = 3;
+    Result res = 4;
+}
+
+// 登出请求
+message LogoutReq {
+    Head head = 1;
+    string name = 2;
+}
+
+message LogoutRsp {
+    Result res = 1;
+}
+
+/************** User_Friend *************/
+message FriendNewReq {
+    int32 uid = 1;
+    int32 fuid = 2;
+}
+
+message FriendNewRsp {
+    Result res = 1;
+}
+
+message FriendDelReq {
+    int32 uid = 1;
+    int32 fuid = 2;
+    int32 timestamp = 3;
+}
+
+message FriendDelRsp {
+    Result err = 1;
+}
+
+message FriendsReq {
+    int32 uid = 1;
+}
+
+message FriendRecord {
+    int32 uid = 1;
+    string name = 2;
+    int64 imei = 3;
+}
+
+message FriendsRsp {
+    int32 uid = 1;
+    repeated FriendRecord friend_list = 2;
+    Result res = 3;
+}
+
+message UserSearchReq {
+    int32 uid = 1;
+    string target = 2;
+}
+
+message UserRecord {
+    int32 uid = 1;
+    string name = 2;
+    int32 user_type = 3;
+    int32 grp_role = 4;
+    bool isFriend = 5;
+}
+
+message UserSearchRsp {
+    Result res = 1;
+    repeated UserRecord user_list = 2;
+
+}
+/**************** Group *****************/
+enum UserType {
+    NORMAL_USER = 0; // 普通用户
+    MANAGER_USER = 1; // 管理员用户
+}
+
+message CreateGroupReq {
+    //    repeated int32 deviceIds = 1;
+    string deviceIds = 1;
+    string groupName = 2;
+    int32 accountId = 3;
+    repeated Member deviceInfos = 4;
+    Group groupInfo = 5;
+}
+
+message CreateGroupResp {
+    GroupInfo GroupInfo = 1;
+    Result res = 2;
+}
+
+message GrpUserAddReq {
+    int32 uid = 1;
+    int32 gid = 2;
+    int32 timestamp = 3;
+}
+
+message GrpUserAddRsp {
+    Result res = 1;
+}
+
+message GrpUserDelReq {
+    int32 uid = 1;
+    int32 gid = 2;
+    int32 timestamp = 3;
+}
+
+message GrpUserDelRsp {
+    Result res = 1;
+}
+
+message UserExitReq {
+    int32 uid = 1;
+    int32 gid = 2;
+}
+
+message UserExitRsp {
+    Result res = 1;
+}
+
+message GroupDelReq {
+    int32 uid = 1;
+    int32 role_type = 2;
+    int32 gid = 3;
+}
+
+message GroupDelRsp {
+    Result res = 1;
+}
+
+message GrpListReq {
+    int32 uid = 1;
+}
+
+message GroupInfo {
+    int32 gid = 1;
+    string group_name = 2;
+    bool isExist = 3;
+}
+
+// 返回模糊查找以及目前用户所在的群组
+message GroupListRsp {
+    int32 uid = 1;
+    repeated GroupInfo group_list = 2;
+    Result res = 3;
+}
+
+
+message GrpSearchReq {
+    int32 uid = 1;
+    string target = 2;
+}
+
+message GrpMemberList {
+    int32 gid = 1;
+    string group_name = 2;
+    repeated UserRecord usr_list = 3;
+}
+
+/************Msg***********/
+enum MsgType {
+    PLAIN_TEXT = 0; // 普通文本
+    IMAGE = 1; // 图片
+    AUDIO = 2; // 音频
+    VIDEO = 3; // 视频
+    LOCATION = 4; // 位置
+}
+
+enum MsgStat {
+    MSG_UNREAD = 0;
+    MSG_READ = 1;
+}
+
+message MsgNewReq {
+    repeated int32 uids = 1;
+    int32 sender_id = 2;
+    MsgType msg_type = 3;
+    string content = 4;
+    int32 create_time = 5;
+}
+
+message MsgNewRsp {
+    Result res = 1;
+}
+
+message MsgReq {
+    int32 uid = 1;
+    MsgStat stat = 2;
+}
+
+message MsgData {
+    int32 msg_id = 1;
+    int32 sender_id = 2;
+    MsgType msg_type = 3;
+    string content = 4;
+    int32 create_time = 5;
+}
+
+message MsgRsp {
+    int32 uid = 1;
+    MsgStat stat = 2;
+    repeated MsgData msg_list = 3;
+}
+
+message MsgStatReq {
+    repeated int32 msg_ids = 1;
+    MsgStat stat = 2;
+}
+
+message MsgStatRsp {
+    Result res = 1;
+}
+
+message MsgDelReq {
+    repeated int32 msg_ids = 1;
+}
+
+message MsgDelRsp {
+    Result res = 1;
+}

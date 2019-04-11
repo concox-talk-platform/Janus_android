@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <EditText
+        android:id="@+id/vname"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="10dp"
+        android:visibility="visible"
+        android:hint="请输入你的名字"
+        android:textSize="14sp"
+        android:layout_marginTop="10dp"/>
+
+    <Button
+        android:id="@+id/vbutton1"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_marginTop="10dp"
+        android:padding="10dp"
+        android:text="注册">
+    </Button>
+
+    <EditText
+        android:id="@+id/vcallname"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:padding="10dp"
+        android:visibility="visible"
+        android:textSize="14sp"
+        android:hint="请输入你要呼叫的名字"/>
+
+    <Button
+        android:id="@+id/vbutton2"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_marginTop="10dp"
+        android:padding="10dp"
+        android:text="开始呼叫">
+    </Button>
+
+    <Button
+        android:id="@+id/vbutton3"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_marginTop="10dp"
+        android:padding="10dp"
+        android:text="挂断">
+    </Button>
+
+    <android.opengl.GLSurfaceView
+        android:id="@+id/glview"
+        android:layout_width="match_parent"
+        android:paddingTop="10dp"
+        android:layout_height="250dp" />
+
+</LinearLayout>

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <EditText
+            android:id="@+id/room"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="10dp"
+            android:inputType="number"
+            android:visibility="gone"
+            android:hint="请输入房间号码，默认1234"
+            android:textSize="14sp"
+            android:layout_marginTop="10dp"/>
+
+        <EditText
+            android:id="@+id/name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
+            android:visibility="visible"
+            android:textSize="14sp"
+            android:text="ws://113.105.153.240:9188"
+            android:hint="请输入url"/>
+        <EditText
+            android:id="@+id/myid"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
+            android:visibility="visible"
+            android:inputType="number"
+            android:textSize="14sp"
+            android:hint="请输入您的ID"/>
+
+        <Button
+            android:id="@+id/join"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_marginTop="10dp"
+            android:visibility="visible"
+            android:padding="10dp"
+            android:text="加入房间">
+        </Button>
+
+
+        <TextView
+            android:id="@+id/group"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
+            android:visibility="gone"
+            android:textSize="14sp"
+            android:text="房间成员："/>
+
+        <TextView
+            android:id="@+id/speak"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
+            android:textSize="14sp"
+            android:text=""/>
+
+        <Button
+            android:id="@+id/button1"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
+            android:visibility="visible"
+            android:text="抢麦">
+        </Button>
+
+        <Button
+            android:id="@+id/button2"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
+            android:visibility="visible"
+            android:text="放麦">
+        </Button>
+
+        <Button
+            android:id="@+id/button3"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_marginTop="10dp"
+            android:padding="10dp"
+            android:visibility="gone"
+            android:text="sendunpublish">
+        </Button>
+
+        <Button
+            android:id="@+id/button"
+            android:layout_height="wrap_content"
+            android:layout_width="match_parent"
+            android:layout_marginTop="20dp"
+            android:padding="50dp"
+            android:text="按住说话">
+        </Button>
+
+    </LinearLayout>
+</ScrollView>
