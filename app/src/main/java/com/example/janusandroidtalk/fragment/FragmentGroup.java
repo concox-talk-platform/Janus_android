@@ -98,7 +98,6 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
         mPullRecyclerView.enableLoadMore(false);
         //mPullRecyclerView.enableLoadDoneTip(true,R.string.recycler_pull_done);
 
-        //进来赋值
         if (UserBean.getUserBean() != null && UserBean.getUserBean().getUserGroupBeanArrayList() != null) {
             //mPullRecyclerView.postRefreshing();
             //new GrpcGetGroupListTask().execute(UserBean.getUserBean().getUserId()+"");
@@ -106,10 +105,10 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
         }
 
         //启动ws链接，配置插件，如果存在默认房间的话，则直接进入，否则需要创建完房间，并刷新之后再启动进入房间
-        EGLContext con = VideoRendererGui.getEGLContext();
-        audioBridgeControl = new AudioBridgeControl(MyApplication.getUserName(),MyApplication.getUserId(),MyApplication.getDefaultGroupId(),FragmentGroup.this);
-        audioBridgeControl.initializeMediaContext(getActivity(), true, false, false, con);
-        audioBridgeControl.Start();
+//        EGLContext con = VideoRendererGui.getEGLContext();
+//        audioBridgeControl = new AudioBridgeControl(MyApplication.getUserName(),MyApplication.getUserId(),MyApplication.getDefaultGroupId(),FragmentGroup.this);
+//        audioBridgeControl.initializeMediaContext(getActivity(), true, true, true, con);
+//        audioBridgeControl.Start();
 
         mAdapter = new GroupListAdapter(getActivity(), R.layout.fragment_group_list_item, myList);
         mPullRecyclerView.setAdapter(mAdapter);
@@ -249,8 +248,8 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                 @Override
                 public void onClick(View v) {
                     final AlertDialog dialog = new AlertDialog.Builder(context)
-                            .setMessage("确定要切换到该群组吗？")
-                            .setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                            .setMessage(R.string.dialog_message_change_group)
+                            .setPositiveButton(R.string.dialog_commit, new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     //发送changeRoom信令 ,data.get("gid"),并在回调成功之后，保存默认群组Id,
@@ -258,7 +257,7 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                                     dialog.dismiss();
                                 }
                             })
-                            .setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                            .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     dialog.dismiss();
@@ -272,7 +271,12 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
     }
 
     @Override
-    public void showMessage(JSONObject msg) {
+    public void janusServer(Boolean isOk) {
+
+    }
+
+    @Override
+    public void showMessage(JSONObject msg,JSONObject jsepLocal) {
         try {
             if (msg.getString("pocroom").equals("audiobridgeisok")) {
                 //创建链接成功，

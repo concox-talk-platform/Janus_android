@@ -1,5 +1,8 @@
 package com.example.janusandroidtalk.fragment;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -18,22 +21,21 @@ import android.widget.Toast;
 import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
 
+import com.example.janusandroidtalk.activity.CallActivity;
 import com.example.janusandroidtalk.activity.LoginActivity;
 import com.example.janusandroidtalk.activity.SearchActivity;
-import com.example.janusandroidtalk.adapter.MineListAdapter;
 import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
+import com.example.janusandroidtalk.pullrecyclerview.BaseRecyclerAdapter;
+import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
 import com.example.janusandroidtalk.pullrecyclerview.layoutmanager.XLinearLayoutManager;
+import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.tools.AppTools;
 
-import org.w3c.dom.Text;
-
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
@@ -41,10 +43,10 @@ import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
 import talk_cloud.TalkCloudGrpc;
 
-public class FragmentMine extends Fragment {
+public class FragmentMine extends Fragment{
 
     private PullRecyclerView mPullRecyclerView;
-    private List<Map<String,String>> myList = new ArrayList<>();
+    private List<UserFriendBean> myList = new ArrayList<>();
     private MineListAdapter mAdapter;
 
     private LinearLayout searchView;
@@ -116,16 +118,61 @@ public class FragmentMine extends Fragment {
             }
         });
 
-        //跳转到添加好友页面
+        //推出按钮
         imageView.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v) {
-                MyApplication.clearMyData();
-                FloatActionController.getInstance().stopMonkServer(getActivity());
-                getActivity().finish();
+                final AlertDialog dialog = new AlertDialog.Builder(getActivity())
+                        .setMessage(R.string.dialog_message_exit)
+                        .setPositiveButton(R.string.dialog_commit, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                                MyApplication.clearMyData();
+                                FloatActionController.getInstance().stopMonkServer(getActivity());
+                                JanusControl.closeWebRtc();
+                                JanusControl.closeJanusServer();
+                                Intent intent = new Intent(getActivity(),LoginActivity.class);
+                                getActivity().startActivity(intent);
+                                getActivity().finish();
+
+                            }
+                        })
+                        .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        }).create();
+                dialog.show();
             }
         });
 
+    }
+
+    class MineListAdapter extends BaseRecyclerAdapter {
+        private Context context;
+        public MineListAdapter(Context context, int layoutResId, List<UserFriendBean> data) {
+            super(context, layoutResId, data);
+            this.context = context;
+        }
+        @Override
+        protected void converted(BaseViewHolder holder, Object item, int position) {
+            final UserFriendBean data = myList.get(position);
+            holder.setText(R.id.fragment_mine_list_item_name,data.getUserFriendName());
+            holder.setText(R.id.fragment_mine_list_item_state,data.getUserFriendId()+"");
+            ImageView imageView = holder.getView(R.id.fragment_mine_list_item_audio_call);
+            imageView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(context, CallActivity.class);
+                    intent.putExtra("isCall",true);
+                    intent.putExtra("name","xiaozhuzhu");
+                    context.startActivity(intent);
+                }
+            });
+
+        }
     }
 
     class GrpcGetFriendListTask extends AsyncTask<String, Void, TalkCloudApp.FriendsRsp> {
@@ -177,19 +224,18 @@ public class FragmentMine extends Fragment {
             myList.clear();
             ArrayList<UserFriendBean> userFriendBeanArrayList = new ArrayList<UserFriendBean>();
             for (TalkCloudApp.FriendRecord friendRecord : result.getFriendListList()) {
-                Map<String,String> map1 = new HashMap<String,String>();
-                map1.put("name",friendRecord.getName());
-                map1.put("state",friendRecord.getUid()+"");
-                myList.add(map1);
                 UserFriendBean userFriendBean = new UserFriendBean();
                 userFriendBean.setUserFriendId((int)friendRecord.getUid());
                 userFriendBean.setUserFriendName(friendRecord.getName());
                 userFriendBeanArrayList.add(userFriendBean);
             }
+            myList.addAll(userFriendBeanArrayList);
             mAdapter.notifyDataSetChanged();
             if (UserBean.getUserBean() != null) {
                 UserBean.getUserBean().setUserFriendBeanArrayList(userFriendBeanArrayList);
             }
         }
     }
+
+
 }

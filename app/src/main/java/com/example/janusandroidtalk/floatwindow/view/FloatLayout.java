@@ -85,9 +85,14 @@ public class FloatLayout extends FrameLayout implements MyControlCallBack {
     }
 
 
+    @Override
+    public void janusServer(Boolean isOk) {
+
+    }
+
     //回调信息处理，
     @Override
-    public void showMessage(final JSONObject msg) {
+    public void showMessage(final JSONObject msg,JSONObject jsepLocal) {
         try{
             if(msg.getString("pocroom").equals("talked")){
                 if(msg.getInt("talk") == 0 || (msg.getInt("talk") == MyApplication.getUserId()) ){

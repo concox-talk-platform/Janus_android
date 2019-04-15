@@ -56,9 +56,9 @@ public class LoginActivity extends AppCompatActivity {
         textGo = (TextView) findViewById(R.id.login_go_register);
         toolbarTitle = (TextView) findViewById(R.id.login_title);
 
-//        editAccount.setText("xiaosong");
-//        editPassword.setText("123456");
-//        editConfirm.setText("123456");
+        editAccount.setText("xiaosong");
+        editPassword.setText("123456");
+        editConfirm.setText("123456");
 
         loading = CustomProgressDialog.createLoadingDialog(this,R.string.recycler_pull_loading);
         loading.setCancelable(true);
@@ -187,6 +187,7 @@ public class LoginActivity extends AppCompatActivity {
             }
             MyApplication.setUserId(result.getUserInfo().getId());
             MyApplication.setUserName(result.getUserInfo().getUserName());
+            MyApplication.setLoginState("login");
 
             Toast.makeText(LoginActivity.this,R.string.login_login_success_tips,Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(LoginActivity.this, MainActivity.class);
@@ -250,6 +251,7 @@ public class LoginActivity extends AppCompatActivity {
 
             MyApplication.setUserId(result.getId());
             MyApplication.setUserName(result.getUserName());
+            MyApplication.setLoginState("login");
 
             Toast.makeText(LoginActivity.this,R.string.login_register_success_tips,Toast.LENGTH_SHORT).show();
             Intent intent = new Intent(LoginActivity.this, MainActivity.class);

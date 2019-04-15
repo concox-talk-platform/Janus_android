@@ -291,12 +291,12 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
                     }
                     break;
                 }
-                case hangup: {
-                    if(handle != null) {
-                        handle.hangUp();
-                    }
-                    break;
-                }
+//                case hangup: {
+//                    if(handle != null) {
+//                        handle.hangUp();
+//                    }
+//                    break;
+//                }
                 case detached: {
                     if (handle != null) {
                         handle.onDetached();

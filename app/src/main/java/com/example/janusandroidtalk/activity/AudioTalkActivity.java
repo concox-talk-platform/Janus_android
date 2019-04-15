@@ -101,9 +101,14 @@ public class AudioTalkActivity extends Activity implements MyControlCallBack {
         }
     }
 
+    @Override
+    public void janusServer(Boolean isOk) {
+
+    }
+
     //回调信息处理，
     @Override
-    public void showMessage(final JSONObject msg) {
+    public void showMessage(final JSONObject msg,JSONObject jsepLocal) {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {

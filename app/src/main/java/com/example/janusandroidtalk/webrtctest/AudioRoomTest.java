@@ -487,7 +487,7 @@ public class AudioRoomTest {
             handle.sendMessage(new IPluginHandleSendMessageCallbacks() {
                 @Override
                 public void onSuccessSynchronous(JSONObject obj) {
-                    myControlCallBack.showMessage(obj);
+                    myControlCallBack.showMessage(obj,null);
                 }
 
                 @Override
@@ -524,7 +524,7 @@ public class AudioRoomTest {
             handle.sendMessage(new IPluginHandleSendMessageCallbacks() {
                 @Override
                 public void onSuccessSynchronous(JSONObject obj) {
-                    myControlCallBack.showMessage(obj);
+                    myControlCallBack.showMessage(obj,null);
                 }
 
                 @Override

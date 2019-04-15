@@ -17,29 +17,25 @@ import java.util.concurrent.locks.AbstractOwnableSynchronizer;
 public class JanusPluginHandle {
 
     private boolean started = false;
-    private MediaStream myStream = null;//本端媒体流
-    private MediaStream remoteStream = null;//远端媒体流
-    private SessionDescription mySdp = null;//本端SDP
-    private PeerConnection pc = null;//PeerConnection
-    private DataChannel dataChannel = null;//DataChannel 数据流通道
+    private MediaStream myStream = null;
+    private MediaStream remoteStream = null;
+    private SessionDescription mySdp = null;
+    private PeerConnection pc = null;
+    private DataChannel dataChannel = null;
     private boolean trickle = true;
-    private boolean iceDone = false; //ice 是否已经发送标识
-    private boolean sdpSent = false; //sdp 是否已经发送标识
+    private boolean iceDone = false;
+    private boolean sdpSent = false;
 
-    private final String VIDEO_TRACK_ID = "1929283";//视频轨道ID
-    private final String AUDIO_TRACK_ID = "1928882";//音频轨道ID
-    private final String LOCAL_MEDIA_ID = "1198181";//本地媒体流IDs
+    private final String VIDEO_TRACK_ID = "1929283";
+    private final String AUDIO_TRACK_ID = "1928882";
+    private final String LOCAL_MEDIA_ID = "1198181";
 
-    //新增WebRtcObserver类并且实现两个观察者接口，sdp和peerConnection
     private class WebRtcObserver implements SdpObserver, PeerConnection.Observer {
         private final IPluginHandleWebRTCCallbacks webRtcCallbacks;
-
-        //webRtcObserver
         public WebRtcObserver(IPluginHandleWebRTCCallbacks callbacks) {
             this.webRtcCallbacks = callbacks;
         }
 
-        //通过 peerConnection.setLocalDescription(sdpObserver, sdp)或者peerConnection.setRemoteDescription(sdpObserver, sdpRemote);
         @Override
         public void onSetSuccess() {
             Log.d("JANUSCLIENT", "On Set Success");
@@ -55,7 +51,6 @@ public class JanusPluginHandle {
             webRtcCallbacks.onCallbackError(error);
         }
 
-        //通过peerConnection.createOffer(sdpObserver,sdpMediaConstraints),或者是createAnswer,
         @Override
         public void onCreateSuccess(SessionDescription sdp) {
             Log.d("JANUSCLIENT", "Create success");
@@ -162,11 +157,11 @@ public class JanusPluginHandle {
 
     private PeerConnectionFactory sessionFactory = null;
     private final JanusServer server;
-    public final JanusSupportedPluginPackages plugin;//janus 支持的插件
+    public final JanusSupportedPluginPackages plugin;
     public final BigInteger id;
     private final IJanusPluginCallbacks callbacks;
-    AudioTrack audioTrack = null;
-    MediaStream mediaStream = null;
+    private VideoSource videoSource;
+    private AudioSource audioSource;
 
     private class AsyncPrepareWebRtc extends AsyncTask<IPluginHandleWebRTCCallbacks, Void, Void> {
 
@@ -266,10 +261,8 @@ public class JanusPluginHandle {
         if (webRTCCallbacks.getMedia().getRecvVideo())
             pc_cons.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
         pc = sessionFactory.createPeerConnection(server.iceServers, pc_cons, new WebRtcObserver(webRTCCallbacks));
-//        if (myStream != null)
-//            pc.addStream(myStream);
-        if (mediaStream != null)
-            pc.addStream(mediaStream);
+        if (myStream != null)
+            pc.addStream(myStream);
         if (webRTCCallbacks.getJsep() == null) {
             createSdpInternal(webRTCCallbacks, true);
         } else {
@@ -310,15 +303,14 @@ public class JanusPluginHandle {
             }
         } else {
             trickle = callbacks.getTrickle() != null ? callbacks.getTrickle() : false;
-
+            AudioTrack audioTrack = null;
             VideoTrack videoTrack = null;
-
+            MediaStream stream = null;
             if (callbacks.getMedia().getSendAudio()) {
-                AudioSource source = sessionFactory.createAudioSource(new MediaConstraints());
-                audioTrack = sessionFactory.createAudioTrack(AUDIO_TRACK_ID, source);
+                audioSource = sessionFactory.createAudioSource(new MediaConstraints());
+                audioTrack = sessionFactory.createAudioTrack(AUDIO_TRACK_ID, audioSource);
             }
-            //if (callbacks.getMedia().getSendVideo()) {
-            if (false) {
+            if (callbacks.getMedia().getSendVideo()) {
                 VideoCapturerAndroid capturer = null;
                 switch (callbacks.getMedia().getCamera()) {
                     case back:
@@ -336,26 +328,25 @@ public class JanusPluginHandle {
                 constraints.optional.add(new MediaConstraints.KeyValuePair("minWidth", Integer.toString(videoConstraints.getMinWidth())));
                 constraints.mandatory.add(new MediaConstraints.KeyValuePair("maxFrameRate", Integer.toString(videoConstraints.getMaxFramerate())));
                 constraints.optional.add(new MediaConstraints.KeyValuePair("minFrameRate", Integer.toString(videoConstraints.getMinFramerate()))); */
-                VideoSource source = sessionFactory.createVideoSource(capturer, constraints);
-                videoTrack = sessionFactory.createVideoTrack(VIDEO_TRACK_ID, source);
+                videoSource = sessionFactory.createVideoSource(capturer, constraints);
+                videoTrack = sessionFactory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
             }
             if (audioTrack != null || videoTrack != null) {
-                mediaStream = sessionFactory.createLocalMediaStream(LOCAL_MEDIA_ID);
+                stream = sessionFactory.createLocalMediaStream(LOCAL_MEDIA_ID);
                 if (audioTrack != null)
-                    mediaStream.addTrack(audioTrack);
+                    stream.addTrack(audioTrack);
                 if (videoTrack != null)
-                    mediaStream.addTrack(videoTrack);
+                    stream.addTrack(videoTrack);
             }
-            //myStream = mediaStream;
-            if (mediaStream != null)
-                onLocalStream(mediaStream);
+            myStream = stream;
+            if (stream != null)
+                onLocalStream(stream);
             streamsDone(callbacks);
         }
     }
 
-    //sdp 设置local或者remote成功之后
     private void createSdpInternal(IPluginHandleWebRTCCallbacks callbacks, Boolean isOffer) {
-        MediaConstraints pc_cons = new MediaConstraints();//创建sdp的媒体约束
+        MediaConstraints pc_cons = new MediaConstraints();
         pc_cons.optional.add(new MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"));
         if (callbacks.getMedia().getRecvAudio()) {
             pc_cons.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
@@ -376,28 +367,36 @@ public class JanusPluginHandle {
 
     public void hangUp() {
         if (remoteStream != null) {
-            remoteStream.dispose();
+            //remoteStream.dispose();
             remoteStream = null;
         }
-//        if (myStream != null) {
-//            myStream.dispose();
-//            myStream = null;
-//        }
-        if (mediaStream != null) {
-            mediaStream.dispose();
-            mediaStream = null;
+        if (myStream != null) {
+            //myStream.dispose();
+            myStream = null;
         }
-        if (pc != null && pc.signalingState() != PeerConnection.SignalingState.CLOSED)
-            pc.close();
+        if (pc != null && pc.signalingState() != PeerConnection.SignalingState.CLOSED){
+            //pc.close();
+            pc.dispose();
+        }
         pc = null;
         started = false;
         mySdp = null;
-        if (dataChannel != null)
+        if (dataChannel != null) {
             dataChannel.close();
+        }
         dataChannel = null;
         trickle = true;
         iceDone = false;
         sdpSent = false;
+
+        if (videoSource != null) {
+            videoSource.dispose();
+        }
+
+        if (audioSource != null) {
+            audioSource.dispose();
+        }
+        sessionFactory.dispose();
     }
 
     public void detach() {
@@ -406,7 +405,6 @@ public class JanusPluginHandle {
         server.sendMessage(obj, JanusMessageType.detach, id);
     }
 
-    //createOffer或者createAnswer,创建成功
     private void onLocalSdp(SessionDescription sdp, IPluginHandleWebRTCCallbacks callbacks) {
         if (pc != null) {
             if (mySdp == null) {
@@ -442,7 +440,7 @@ public class JanusPluginHandle {
             }
             message.put("candidate", cand);
 
-            server.sendMessage(message, JanusMessageType.trickle, id);//通过ws发送候选人
+            server.sendMessage(message, JanusMessageType.trickle, id);
         } catch (JSONException ex) {
 
         }
@@ -464,5 +462,4 @@ public class JanusPluginHandle {
             }
         }
     }
-
 }

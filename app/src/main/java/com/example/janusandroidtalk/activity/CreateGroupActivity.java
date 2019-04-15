@@ -338,9 +338,14 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
         }
     }
 
+    @Override
+    public void janusServer(Boolean isOk) {
+
+    }
+
     //回调信息处理，
     @Override
-    public void showMessage(final JSONObject msg) {
+    public void showMessage(final JSONObject msg,JSONObject jsepLocal) {
         try{
             if(msg.getString("pocroom").equals("created")) {
                 Message message = new Message();

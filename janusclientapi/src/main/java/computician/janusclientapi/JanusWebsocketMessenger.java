@@ -44,6 +44,9 @@ public class JanusWebsocketMessenger implements IJanusMessenger {
                 if (ex != null) {
                     handler.onError(ex);
                 }
+                if(webSocket == null){
+                    handler.onError(ex);
+                }
                 client = webSocket;
                 client.setWriteableCallback(new WritableCallback() {
                     @Override

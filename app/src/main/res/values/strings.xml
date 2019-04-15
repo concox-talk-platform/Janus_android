@@ -46,4 +46,20 @@
     <string name="new_group_str_create">创建群组</string>
     <string name="new_group_str_create_success">创建群组成功</string>
 
+
+    <!--dialog-->
+    <string name="dialog_commit">确定</string>
+    <string name="dialog_cancel">取消</string>
+    <string name="dialog_message_change_group">确定切换到群组吗？</string>
+    <string name="dialog_message_exit">确定退出该账户吗?</string>
+
+    <!--audioCall-->
+    <string name="audio_call_hangup">挂断</string>
+    <string name="audio_call_cancel">取消</string>
+    <string name="audio_call_accept">接听</string>
+    <string name="audio_call_hangup_remote_tip">对方已挂断</string>
+    <string name="audio_call_reject_remote_tip">对方已拒绝</string>
+    <string name="audio_call_hangup_tip">已挂断</string>
+    <string name="audio_call_cancel_tip">已取消</string>
+
 </resources>

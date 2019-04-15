@@ -1,8 +1,10 @@
 package com.example.janusandroidtalk;
 
+import android.content.Intent;
 import android.opengl.EGLContext;
-import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.Fragment;
@@ -12,16 +14,19 @@ import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.widget.Toast;
 
+import com.example.janusandroidtalk.activity.CallActivity;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
-import com.example.janusandroidtalk.floatwindow.permission.FloatPermissionManager;
 import com.example.janusandroidtalk.fragment.FragmentGroup;
 import com.example.janusandroidtalk.fragment.FragmentMine;
-import com.example.janusandroidtalk.signalingcontrol.AudioBridgeControl;
+import com.example.janusandroidtalk.signalingcontrol.JanusControl;
+import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
 import com.example.janusandroidtalk.webrtctest.AppRTCAudioManager;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.webrtc.VideoRendererGui;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements MyControlCallBack {
 
     //创建fragment变量
     private FragmentMine fragmentMine;
@@ -31,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
 
     //audioManager
     private AppRTCAudioManager audioManager = null;
-    private AudioBridgeControl audioBridgeControl;
+    private JanusControl janusControl = null;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -68,6 +73,11 @@ public class MainActivity extends AppCompatActivity {
 //            audioBridgeControl.Start();
 //        }
 
+        // 进行webSocket连接
+        EGLContext con = VideoRendererGui.getEGLContext();
+        janusControl = new JanusControl(MainActivity.this,MyApplication.getUserName(),MyApplication.getUserId(),MyApplication.getDefaultGroupId());
+        janusControl.initializeMediaContext(MainActivity.this, true, true, true, con);
+        janusControl.Start();
     }
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
@@ -122,7 +132,8 @@ public class MainActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(),  R.string.quit_tip, Toast.LENGTH_SHORT).show();
                 exitTime =  System.currentTimeMillis();
             }else{
-                MyApplication.clearMyData();
+                JanusControl.closeWebRtc();
+                JanusControl.closeJanusServer();
                 FloatActionController.getInstance().stopMonkServer(this);
                 finish();
             }
@@ -155,4 +166,77 @@ public class MainActivity extends AppCompatActivity {
             audioManager = null;
         }
     }
+
+    @Override
+    public void janusServer(Boolean isOk) {
+        if(isOk){
+            JanusControl.sendAttachVideoCalllugin(MainActivity.this);
+            Message message = new Message();
+            message.what = 0;
+            handler.sendMessage(message);
+        }else{
+            Message message1 = new Message();
+            message1.what = 1;
+            handler.sendMessage(message1);
+        }
+    }
+
+    @Override
+    public void showMessage(JSONObject msg ,JSONObject jsepLocal) {
+        try {
+            if (msg.getString("videocall").equals("videoCallIsOk")) {
+                JanusControl.sendRegister();
+            }else if(msg.getString("videocall").equals("event")){// 信令成功
+                if(msg.getJSONObject("result").getString("event").equals("registered")){
+
+                }else if(msg.getJSONObject("result").getString("event").equals("calling")){
+
+                }else if(msg.getJSONObject("result").getString("event").equals("incomingcall")){
+                    Message message2 = new Message();
+                    message2.what = 2;
+                    Bundle bundle = new Bundle();
+                    bundle.putString("name",msg.getJSONObject("result").getString("username"));
+                    bundle.putString("jsep",jsepLocal.toString());
+                    message2.setData(bundle);
+                    handler.sendMessage(message2);
+
+                }else if(msg.getJSONObject("result").getString("event").equals("accepted")){
+
+                }else if(msg.getJSONObject("result").getString("event").equals("set")){
+
+                }else if(msg.getJSONObject("result").getString("event").equals("update")){
+
+                }else if(msg.getJSONObject("result").getString("event").equals("hangup")){
+
+                }
+            }else if(msg.getString("videocall").equals("createAnswer")){//createAnswer
+
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private Handler handler = new Handler() {
+        public void handleMessage(android.os.Message msg) {
+            switch (msg.what) {
+                case 0:
+                    Toast.makeText(MainActivity.this,"webSocket连接成功",Toast.LENGTH_SHORT).show();
+                    break;
+                case 1:
+                    Toast.makeText(MainActivity.this,"webSocket连接失败",Toast.LENGTH_SHORT).show();
+                    break;
+                case 2:
+                    Intent intent = new Intent(MainActivity.this, CallActivity.class);
+                    Bundle bundle = new Bundle();
+                    bundle.putString("name",msg.getData().getString("name"));
+                    bundle.putString("jsep",msg.getData().getString("jsep"));
+                    bundle.putBoolean("isCall",false);
+                    intent.putExtras(bundle);
+                    startActivity(intent);
+                    break;
+            }
+        };
+    };
+
 }
