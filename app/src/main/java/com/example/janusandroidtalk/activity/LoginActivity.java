@@ -2,6 +2,7 @@ package com.example.janusandroidtalk.activity;
 
 import android.app.Dialog;
 import android.content.Intent;
+import android.media.MediaPlayer;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -56,9 +57,10 @@ public class LoginActivity extends AppCompatActivity {
         textGo = (TextView) findViewById(R.id.login_go_register);
         toolbarTitle = (TextView) findViewById(R.id.login_title);
 
-        editAccount.setText("xiaosong");
-        editPassword.setText("123456");
-        editConfirm.setText("123456");
+
+        if(!TextUtils.isEmpty(MyApplication.getUserName()) && !TextUtils.isEmpty(MyApplication.getPassword()))
+        editAccount.setText(MyApplication.getUserName());
+        editPassword.setText(MyApplication.getPassword());
 
         loading = CustomProgressDialog.createLoadingDialog(this,R.string.recycler_pull_loading);
         loading.setCancelable(true);
@@ -70,6 +72,8 @@ public class LoginActivity extends AppCompatActivity {
                 if(!isRegister){
                     isRegister = true;
                     button.setText(R.string.login_register);
+                    editAccount.setText("");
+                    editPassword.setText("");
                     textGo.setText(R.string.login_go_login);
                     toolbarTitle.setText(R.string.login_register);
                     editConfirm.setVisibility(View.VISIBLE);
@@ -187,6 +191,7 @@ public class LoginActivity extends AppCompatActivity {
             }
             MyApplication.setUserId(result.getUserInfo().getId());
             MyApplication.setUserName(result.getUserInfo().getUserName());
+            MyApplication.setPassword(editPassword.getText().toString());
             MyApplication.setLoginState("login");
 
             Toast.makeText(LoginActivity.this,R.string.login_login_success_tips,Toast.LENGTH_SHORT).show();
@@ -251,6 +256,7 @@ public class LoginActivity extends AppCompatActivity {
 
             MyApplication.setUserId(result.getId());
             MyApplication.setUserName(result.getUserName());
+            MyApplication.setPassword(editPassword.getText().toString());
             MyApplication.setLoginState("login");
 
             Toast.makeText(LoginActivity.this,R.string.login_register_success_tips,Toast.LENGTH_SHORT).show();

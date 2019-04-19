@@ -58,7 +58,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/mine_search"
+            android:text="@string/group_search"
             android:gravity="center"
             android:layout_gravity="center"
             android:textSize="@dimen/btn_text_size_small"

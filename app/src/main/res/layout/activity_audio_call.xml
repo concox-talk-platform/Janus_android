@@ -1,119 +1,146 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#333333">
+    android:background="#242424">
 
-    <LinearLayout
-        android:id="@+id/audio_call_layout_gl_view"
+    <org.webrtc.SurfaceViewRenderer
+        android:id="@+id/local_view_render"
+        android:layout_width="120dp"
+        android:layout_height="180dp"
+        android:layout_gravity="end"
+        android:layout_marginEnd="10dp"
+        android:layout_marginRight="10dp"
+        android:layout_marginTop="10dp" />
+
+    <org.webrtc.SurfaceViewRenderer
+        android:id="@+id/remote_view_render"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:orientation="vertical">
-        <android.opengl.GLSurfaceView
-            android:id="@+id/audio_call_gl_view"
+        android:layout_height="match_parent" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <LinearLayout
+            android:id="@+id/audio_call_layout_head"
             android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-    </LinearLayout>
+            android:layout_height="wrap_content"
+            android:layout_marginTop="150dp"
+            android:visibility="visible"
+            android:orientation="vertical">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
 
-    <LinearLayout
-        android:id="@+id/audio_call_layout_head"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="150dp"
-        android:visibility="visible"
-        android:orientation="vertical">
+                <ImageView
+                    android:layout_width="200dp"
+                    android:layout_height="200dp"
+                    android:src="@drawable/ic_account_box_black_48dp"
+                    android:layout_gravity="center_horizontal"/>
+                <TextView
+                    android:id="@+id/audio_call_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="@dimen/text_size_middle"
+                    android:layout_marginTop="3dp"
+                    android:textColor="@color/white"
+                    android:layout_gravity="center_horizontal"/>
+            </LinearLayout>
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
-
-            <ImageView
-                android:layout_width="200dp"
-                android:layout_height="200dp"
-                android:src="@drawable/ic_account_box_black_48dp"
-                android:layout_gravity="center_horizontal"/>
-            <TextView
-                android:id="@+id/audio_call_name"
+            android:layout_above="@+id/audio_call_layout_1"
+            android:gravity="center"
+            android:orientation="horizontal">
+            <Chronometer
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:format="00:00:00"
+                android:padding="10dp"
+                android:textColor="@color/white"
                 android:textSize="@dimen/text_size_middle"
-                android:layout_marginTop="3dp"
-                android:textColor="@color/white"
-                android:layout_gravity="center_horizontal"/>
-        </LinearLayout>
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_alignParentBottom="true"
-        android:paddingBottom="10dp"
-        android:orientation="horizontal">
-        <LinearLayout
-            android:id="@+id/audio_call_hangup"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@mipmap/hangup"
-                android:layout_gravity="center_horizontal"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/audio_call_hangup"
-                android:textSize="@dimen/text_size_small"
-                android:layout_marginTop="3dp"
-                android:textColor="@color/white"
-                android:layout_gravity="center_horizontal"/>
+                android:visibility="gone"
+                android:id="@+id/audio_call_time"/>
         </LinearLayout>
         <LinearLayout
-            android:id="@+id/audio_call_cancel"
-            android:layout_width="0dp"
+            android:id="@+id/audio_call_layout_1"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
+            android:layout_alignParentBottom="true"
+            android:paddingBottom="15dp"
+            android:orientation="horizontal">
+            <LinearLayout
+                android:id="@+id/audio_call_hangup"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
 
-            <ImageView
-                android:layout_width="wrap_content"
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@mipmap/webrtc_cancel"
+                    android:layout_gravity="center_horizontal"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/audio_call_hangup"
+                    android:textSize="@dimen/text_size_middle"
+                    android:layout_marginTop="5dp"
+                    android:textColor="@color/white"
+                    android:layout_gravity="center_horizontal"/>
+            </LinearLayout>
+            <LinearLayout
+                android:id="@+id/audio_call_cancel"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:src="@mipmap/hangup"
-                android:layout_gravity="center_horizontal"/>
-            <TextView
-                android:layout_width="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@mipmap/webrtc_cancel"
+                    android:layout_gravity="center_horizontal"/>
+                <TextView
+                    android:id="@+id/audio_call_cancel_text"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/audio_call_cancel"
+                    android:textSize="@dimen/text_size_middle"
+                    android:layout_marginTop="5dp"
+                    android:textColor="@color/white"
+                    android:layout_gravity="center_horizontal"/>
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/audio_call_accept"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/audio_call_cancel"
-                android:textSize="@dimen/text_size_small"
-                android:layout_marginTop="3dp"
-                android:textColor="@color/white"
-                android:layout_gravity="center_horizontal"/>
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:src="@mipmap/webrtc_answer"
+                    android:layout_gravity="center_horizontal"/>
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/audio_call_accept"
+                    android:textSize="@dimen/text_size_middle"
+                    android:textColor="@color/white"
+                    android:layout_marginTop="5dp"
+                    android:layout_gravity="center_horizontal"/>
+            </LinearLayout>
         </LinearLayout>
+    </RelativeLayout>
 
-        <LinearLayout
-            android:id="@+id/audio_call_accept"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <ImageView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:src="@mipmap/accept"
-                android:layout_gravity="center_horizontal"/>
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/audio_call_accept"
-                android:textSize="@dimen/text_size_small"
-                android:textColor="@color/white"
-                android:layout_marginTop="3dp"
-                android:layout_gravity="center_horizontal"/>
-        </LinearLayout>
-    </LinearLayout>
-
-</RelativeLayout>
+</FrameLayout>
 

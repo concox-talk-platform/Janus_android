@@ -6,7 +6,7 @@ android {
         config {
             keyAlias 'key0'
             keyPassword 'shenzhenjimi'
-            storeFile file('E:/AndroidWorkSpace/Janus_android/app/shenzhenjimi.jks')
+            storeFile file('./shenzhenjimi.jks')
             storePassword 'shenzhenjimi'
         }
     }
@@ -34,6 +34,10 @@ android {
         disable 'GoogleAppIndexingWarning', 'HardcodedText', 'InvalidPackage'
         textReport true
         textOutput "stdout"
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
     }
 }
 
@@ -67,4 +71,5 @@ dependencies {
     implementation 'io.grpc:grpc-protobuf-lite:1.19.0'
     implementation 'io.grpc:grpc-stub:1.19.0'
     implementation 'javax.annotation:javax.annotation-api:1.2'
+    implementation 'org.webrtc:google-webrtc:1.0.27485'
 }

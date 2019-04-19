@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">几米对讲</string>
     <string name="title_group">群组</string>
-    <string name="title_Mine">我的</string>
+    <string name="title_Mine">我的好友</string>
     <string name="title_quit">退出</string>
 
     <string name="quit_tip">再按一次退出程序</string>
@@ -11,7 +11,7 @@
     <string name="recycler_pull_done">已经加载完</string>
 
     <!--loginActivity-->
-    <string name="login_account">请输入账号</string>
+    <string name="login_account">请输入手机号</string>
     <string name="login_password">请输入密码</string>
     <string name="login_confirm_password">请输入确认密码</string>
     <string name="login_login">登录</string>
@@ -27,10 +27,11 @@
     <string name="toolbar_commit">确定</string>
 
     <!--mine-->
-    <string name="mine_search">搜索</string>
+    <string name="mine_search">搜索添加好友</string>
     <string name="mine_add_friend">添加好友</string>
 
     <!--group-->
+    <string name="group_search">搜索加入群组</string>
     <string name="search_str_add_group">加入群组</string>
     <string name="search_str_added_group">已加入</string>
 
@@ -52,6 +53,7 @@
     <string name="dialog_cancel">取消</string>
     <string name="dialog_message_change_group">确定切换到群组吗？</string>
     <string name="dialog_message_exit">确定退出该账户吗?</string>
+    <string name="dialog_message_group_name">请输入群组名称</string>
 
     <!--audioCall-->
     <string name="audio_call_hangup">挂断</string>
@@ -61,5 +63,6 @@
     <string name="audio_call_reject_remote_tip">对方已拒绝</string>
     <string name="audio_call_hangup_tip">已挂断</string>
     <string name="audio_call_cancel_tip">已取消</string>
+    <string name="audio_call_no_accept_tip">对方无响应</string>
 
 </resources>

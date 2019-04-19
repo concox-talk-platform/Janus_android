@@ -1,34 +1,485 @@
 package computician.janusclientapi;
 
+import android.content.Context;
 import android.os.AsyncTask;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.*;
-import org.webrtc.videoengine.VideoCaptureAndroid;
+import org.webrtc.audio.JavaAudioDeviceModule;;
 
 import java.math.BigInteger;
-import java.util.concurrent.locks.AbstractOwnableSynchronizer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by ben.trent on 6/25/2015.
  */
 public class JanusPluginHandle {
 
-    private boolean started = false;
-    private MediaStream myStream = null;
-    private MediaStream remoteStream = null;
-    private SessionDescription mySdp = null;
-    private PeerConnection pc = null;
+    private  MediaStream myStream = null;
+    private  MediaStream remoteStream = null;
+    private  SessionDescription mySdp = null;
+    private  PeerConnection pc = null;
     private DataChannel dataChannel = null;
-    private boolean trickle = true;
-    private boolean iceDone = false;
-    private boolean sdpSent = false;
+    private  boolean trickle = true;
+    private  boolean iceDone = false;
+    private  boolean sdpSent = false;
 
-    private final String VIDEO_TRACK_ID = "1929283";
-    private final String AUDIO_TRACK_ID = "1928882";
-    private final String LOCAL_MEDIA_ID = "1198181";
+    private  String VIDEO_TRACK_ID = "1929283";
+    private  String AUDIO_TRACK_ID = "1928882";
+    private  String LOCAL_MEDIA_ID = "1198181";
+
+    private VideoSource videoSource;
+    private AudioSource audioSource;
+
+    private  final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private  PeerConnectionFactory sessionFactory = null;
+    private  JanusServer server;
+    public  JanusSupportedPluginPackages plugin;
+    public  BigInteger id;
+    private  IJanusPluginCallbacks callbacks;
+
+    private  Context _context;
+    private  EglBase _rootEglBase;
+    private  SurfaceTextureHelper _surfaceTextureHelper;
+    private  VideoCapturer _captureAndroid;
+    public  final int VIDEO_RESOLUTION_WIDTH = 320;
+    public  final int VIDEO_RESOLUTION_HEIGHT = 240;
+    public  final int FPS = 10;
+
+    public JanusPluginHandle(JanusServer server, JanusSupportedPluginPackages plugin, BigInteger handle_id, IJanusPluginCallbacks callbacks) {
+        this.server = server;
+        this.plugin = plugin;
+        this.id = handle_id;
+        this.callbacks = callbacks;
+    }
+
+    //创建Factory
+    public void createPeerConnectionFactory(Context context,EglBase rootEglBase) {
+        executor.execute(() -> {
+            _context =  context;
+            PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(_context)
+                        .createInitializationOptions());
+            _rootEglBase = rootEglBase;
+            final VideoEncoderFactory encoderFactory;
+            final VideoDecoderFactory decoderFactory;
+            boolean hardwareAccelerated = true;
+            if (hardwareAccelerated) {
+                encoderFactory = new DefaultVideoEncoderFactory(
+                        _rootEglBase.getEglBaseContext(),
+                        true,
+                        true);
+                decoderFactory = new DefaultVideoDecoderFactory(_rootEglBase.getEglBaseContext());
+            } else {
+                encoderFactory = new SoftwareVideoEncoderFactory();
+                decoderFactory = new SoftwareVideoDecoderFactory();
+            }
+            PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
+            sessionFactory = PeerConnectionFactory.builder()
+                    .setOptions(options)
+                    .setAudioDeviceModule(JavaAudioDeviceModule.builder(_context).createAudioDeviceModule())
+                    .setVideoEncoderFactory(encoderFactory)
+                    .setVideoDecoderFactory(decoderFactory)
+                    .createPeerConnectionFactory();
+
+        });
+    }
+    public void createPeerConnectionFactory(Context context) {
+        executor.execute(() -> {
+            _context =  context;
+            PeerConnectionFactory.initialize(PeerConnectionFactory.InitializationOptions.builder(_context)
+                    .createInitializationOptions());
+
+            PeerConnectionFactory.Options options = new PeerConnectionFactory.Options();
+            sessionFactory = PeerConnectionFactory.builder()
+                    .setOptions(options)
+                    .setAudioDeviceModule(JavaAudioDeviceModule.builder(_context).createAudioDeviceModule())
+                    .createPeerConnectionFactory();
+        });
+    }
+
+    //创建peerConnection
+    public void createPeerConnection(IPluginHandleWebRTCCallbacks callbacks) {
+        executor.execute(() -> {
+            PeerConnection.RTCConfiguration rtcConfig = new PeerConnection.RTCConfiguration(server.iceServers);
+            pc = sessionFactory.createPeerConnection(rtcConfig, new WebRtcObserver(callbacks));
+
+            trickle = callbacks.getTrickle() != null ? callbacks.getTrickle() : false;
+            AudioTrack audioTrack = null;
+            VideoTrack videoTrack = null;
+            MediaStream stream = null;
+            if (callbacks.getMedia().getSendAudio()) {
+                audioSource = sessionFactory.createAudioSource(new MediaConstraints());
+                audioTrack = sessionFactory.createAudioTrack(AUDIO_TRACK_ID, audioSource);
+            }
+            if (callbacks.getMedia().getSendVideo()) {
+                switch (callbacks.getMedia().getCamera()) {
+                    case back:
+                        if(useCamera2()){
+                            _captureAndroid =  createCameraCapture(new Camera2Enumerator(_context));
+                        }else{
+                            _captureAndroid = createCameraCapture(new Camera1Enumerator(true));
+                        }
+                        break;
+                    case front:
+                        _captureAndroid = createCameraCapture(new Camera1Enumerator(true));
+                        break;
+                }
+                _surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", _rootEglBase.getEglBaseContext());
+                videoSource = sessionFactory.createVideoSource(_captureAndroid.isScreencast());
+                _captureAndroid.initialize(_surfaceTextureHelper, _context, videoSource.getCapturerObserver());
+                _captureAndroid.startCapture(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);
+                videoTrack = sessionFactory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
+            }
+            if (audioTrack != null || videoTrack != null) {
+                stream = sessionFactory.createLocalMediaStream(LOCAL_MEDIA_ID);
+                if (audioTrack != null) {
+                    stream.addTrack(audioTrack);
+                }
+                if (videoTrack != null) {
+                    stream.addTrack(videoTrack);
+                }
+            }
+            myStream = stream;
+            if (stream != null) {
+                onLocalStream(stream);
+            }
+            if (myStream != null) {
+                pc.addStream(myStream);
+            }
+
+            if (callbacks.getJsep() == null) {
+                pc.createOffer(new WebRtcObserver(callbacks), offerOrAnswerConstraint());
+            } else {
+                try {
+                    JSONObject obj = callbacks.getJsep();
+                    String sdp = obj.getString("sdp");
+                    SessionDescription.Type type = SessionDescription.Type.fromCanonicalForm(obj.getString("type"));
+                    SessionDescription sessionDescription = new SessionDescription(type, sdp);
+                    pc.setRemoteDescription(new WebRtcObserver(callbacks), sessionDescription);
+                } catch (Exception ex) {
+                    callbacks.onCallbackError(ex.getMessage());
+                }
+            }
+        });
+    }
+
+    public void JanusSetRemoteDescription(IPluginHandleWebRTCCallbacks callbacks){
+        try {
+            JSONObject obj = callbacks.getJsep();
+            String sdp = obj.getString("sdp");
+            SessionDescription.Type type = SessionDescription.Type.fromCanonicalForm(obj.getString("type"));
+            SessionDescription sessionDescription = new SessionDescription(type, sdp);
+            pc.setRemoteDescription(new WebRtcObserver(callbacks), sessionDescription);
+        } catch (Exception ex) {
+            callbacks.onCallbackError(ex.getMessage());
+        }
+    }
+
+    public void createOffer(IPluginHandleWebRTCCallbacks callbacks) {
+        executor.execute(() -> {
+            pc.createOffer(new WebRtcObserver(callbacks), offerOrAnswerConstraint());
+        });
+    }
+
+    public void createAnswer(IPluginHandleWebRTCCallbacks callbacks) {
+        executor.execute(() -> {
+            pc.createAnswer(new WebRtcObserver(callbacks), offerOrAnswerConstraint());
+        });
+    }
+
+
+    public void onMessage(String msg) {
+        try {
+            JSONObject obj = new JSONObject(msg);
+            callbacks.onMessage(obj, null);
+        } catch (JSONException ex) {
+            //TODO do we want to notify the GatewayHandler?
+        }
+    }
+
+    public void onMessage(JSONObject msg, JSONObject jsep) {
+        callbacks.onMessage(msg, jsep);
+    }
+
+    private void onLocalStream(MediaStream stream) {
+        callbacks.onLocalStream(stream);
+    }
+
+    private void onRemoteStream(MediaStream stream) {
+        callbacks.onRemoteStream(stream);
+    }
+
+    public void onDataOpen(Object data) {
+        callbacks.onDataOpen(data);
+    }
+
+    public void onData(Object data) {
+        callbacks.onData(data);
+    }
+
+    public void onCleanup() {
+        callbacks.onCleanup();
+    }
+
+    public void onDetached() {
+        callbacks.onDetached();
+    }
+
+    public void sendMessage(IPluginHandleSendMessageCallbacks obj) {
+        server.sendMessage(TransactionType.plugin_handle_message, id, obj, plugin);
+    }
+
+    private VideoCapturer createCameraCapture(CameraEnumerator enumerator) {
+        final String[] deviceNames = enumerator.getDeviceNames();
+
+        // First, try to find front facing camera
+        for (String deviceName : deviceNames) {
+            if (enumerator.isFrontFacing(deviceName)) {
+                VideoCapturer videoCapturer = enumerator.createCapturer(deviceName, null);
+
+                if (videoCapturer != null) {
+                    return videoCapturer;
+                }
+            }
+        }
+
+        // Front facing camera not found, try something else
+        for (String deviceName : deviceNames) {
+            if (!enumerator.isFrontFacing(deviceName)) {
+                VideoCapturer videoCapturer = enumerator.createCapturer(deviceName, null);
+
+                if (videoCapturer != null) {
+                    return videoCapturer;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private boolean useCamera2() {
+        return Camera2Enumerator.isSupported(_context);
+    }
+
+    public void hangUp() {
+       executor.execute(()->{
+           if (pc != null && pc.signalingState() != PeerConnection.SignalingState.CLOSED){
+               pc.close();
+               pc = null;
+           }
+
+           if (audioSource != null) {
+               audioSource.dispose();
+               audioSource = null;
+           }
+
+           if (videoSource != null) {
+               videoSource.dispose();
+               videoSource = null;
+           }
+
+           if (_captureAndroid != null) {
+               try {
+                   _captureAndroid.stopCapture();
+               } catch (InterruptedException e) {
+                   e.printStackTrace();
+               }
+               _captureAndroid.dispose();
+               _captureAndroid = null;
+           }
+
+           if (_surfaceTextureHelper != null) {
+               _surfaceTextureHelper.dispose();
+               _surfaceTextureHelper = null;
+           }
+
+           if (sessionFactory != null) {
+               sessionFactory.dispose();
+               sessionFactory = null;
+           }
+
+           mySdp = null;
+           if (dataChannel != null)
+               dataChannel.close();
+           dataChannel = null;
+           trickle = true;
+           iceDone = false;
+           sdpSent = false;
+       });
+    }
+
+    public void detach() {
+        hangUp();
+        JSONObject obj = new JSONObject();
+        server.sendMessage(obj, JanusMessageType.detach, id);
+    }
+
+    private  final String VIDEO_CODEC_H264 = "H264";
+    private  void onLocalSdp(SessionDescription sdp, IPluginHandleWebRTCCallbacks callbacks) {
+        executor.execute(() ->{
+            if (mySdp == null) {
+                mySdp = sdp;
+                if(_rootEglBase != null){
+                    String sdpDescription = sdp.description;
+                    sdpDescription = preferCodec(sdpDescription, VIDEO_CODEC_H264, false);
+                    SessionDescription localsdp = new SessionDescription(sdp.type, sdpDescription);
+                    pc.setLocalDescription(new WebRtcObserver(callbacks), localsdp);
+                }else{
+                    pc.setLocalDescription(new WebRtcObserver(callbacks), sdp);
+                }
+            }
+            if (!iceDone && !trickle)
+                return;
+            if (sdpSent)
+                return;
+            try {
+                sdpSent = true;
+                JSONObject obj = new JSONObject();
+                obj.put("sdp", mySdp.description);
+                obj.put("type", mySdp.type.canonicalForm());
+                callbacks.onSuccess(obj);
+            } catch (JSONException ex) {
+                callbacks.onCallbackError(ex.getMessage());
+            }
+
+        });
+    }
+
+    private static String preferCodec(String sdpDescription, String codec, boolean isAudio) {
+        final String[] lines = sdpDescription.split("\r\n");
+        final int mLineIndex = findMediaDescriptionLine(isAudio, lines);
+        if (mLineIndex == -1) {
+            return sdpDescription;
+        }
+        // A list with all the payload types with name |codec|. The payload types are integers in the
+        // range 96-127, but they are stored as strings here.
+        final List<String> codecPayloadTypes = new ArrayList<>();
+        // a=rtpmap:<payload type> <encoding name>/<clock rate> [/<encoding parameters>]
+        final Pattern codecPattern = Pattern.compile("^a=rtpmap:(\\d+) " + codec + "(/\\d+)+[\r]?$");
+        for (String line : lines) {
+            Matcher codecMatcher = codecPattern.matcher(line);
+            if (codecMatcher.matches()) {
+                codecPayloadTypes.add(codecMatcher.group(1));
+            }
+        }
+        if (codecPayloadTypes.isEmpty()) {
+            return sdpDescription;
+        }
+
+        final String newMLine = movePayloadTypesToFront(codecPayloadTypes, lines[mLineIndex]);
+        if (newMLine == null) {
+            return sdpDescription;
+        }
+
+        lines[mLineIndex] = newMLine;
+        return joinString(Arrays.asList(lines), "\r\n", true /* delimiterAtEnd */);
+    }
+
+    private static @Nullable
+    String movePayloadTypesToFront(
+            List<String> preferredPayloadTypes, String mLine) {
+        // The format of the media description line should be: m=<media> <port> <proto> <fmt> ...
+        final List<String> origLineParts = Arrays.asList(mLine.split(" "));
+        if (origLineParts.size() <= 3) {
+            return null;
+        }
+        final List<String> header = origLineParts.subList(0, 3);
+        final List<String> unpreferredPayloadTypes =
+                new ArrayList<>(origLineParts.subList(3, origLineParts.size()));
+        unpreferredPayloadTypes.removeAll(preferredPayloadTypes);
+        // Reconstruct the line with |preferredPayloadTypes| moved to the beginning of the payload
+        // types.
+        final List<String> newLineParts = new ArrayList<>();
+        newLineParts.addAll(header);
+        newLineParts.addAll(preferredPayloadTypes);
+        newLineParts.addAll(unpreferredPayloadTypes);
+        return joinString(newLineParts, " ", false /* delimiterAtEnd */);
+    }
+
+    private static int findMediaDescriptionLine(boolean isAudio, String[] sdpLines) {
+        final String mediaDescription = isAudio ? "m=audio " : "m=video ";
+        for (int i = 0; i < sdpLines.length; ++i) {
+            if (sdpLines[i].startsWith(mediaDescription)) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    private static String joinString(
+            Iterable<? extends CharSequence> s, String delimiter, boolean delimiterAtEnd) {
+        Iterator<? extends CharSequence> iter = s.iterator();
+        if (!iter.hasNext()) {
+            return "";
+        }
+        StringBuilder buffer = new StringBuilder(iter.next());
+        while (iter.hasNext()) {
+            buffer.append(delimiter).append(iter.next());
+        }
+        if (delimiterAtEnd) {
+            buffer.append(delimiter);
+        }
+        return buffer.toString();
+    }
+
+    private MediaConstraints offerOrAnswerConstraint() {
+        MediaConstraints mediaConstraints = new MediaConstraints();
+        ArrayList<MediaConstraints.KeyValuePair> keyValuePairs = new ArrayList<>();
+        keyValuePairs.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
+       if(_rootEglBase == null){
+           keyValuePairs.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", String.valueOf(false)));
+       }else{
+           keyValuePairs.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", String.valueOf(true)));
+       }
+        mediaConstraints.mandatory.addAll(keyValuePairs);
+        return mediaConstraints;
+    }
+
+    private void sendTrickleCandidate(IceCandidate candidate) {
+        try {
+            JSONObject message = new JSONObject();
+            JSONObject cand = new JSONObject();
+            if (candidate == null)
+                cand.put("completed", true);
+            else {
+                cand.put("candidate", candidate.sdp);
+                cand.put("sdpMid", candidate.sdpMid);
+                cand.put("sdpMLineIndex", candidate.sdpMLineIndex);
+            }
+            message.put("candidate", cand);
+
+            server.sendMessage(message, JanusMessageType.trickle, id);
+        } catch (JSONException ex) {
+
+        }
+    }
+
+    private void sendSdp(IPluginHandleWebRTCCallbacks callbacks) {
+        if (mySdp != null) {
+            mySdp = pc.getLocalDescription();
+            if (!sdpSent) {
+                sdpSent = true;
+                try {
+                    JSONObject obj = new JSONObject();
+                    obj.put("sdp", mySdp.description);
+                    obj.put("type", mySdp.type.canonicalForm());
+                    callbacks.onSuccess(obj);
+                } catch (JSONException ex) {
+                    callbacks.onCallbackError(ex.getMessage());
+                }
+            }
+        }
+    }
 
     private class WebRtcObserver implements SdpObserver, PeerConnection.Observer {
         private final IPluginHandleWebRTCCallbacks webRtcCallbacks;
@@ -40,7 +491,7 @@ public class JanusPluginHandle {
         public void onSetSuccess() {
             Log.d("JANUSCLIENT", "On Set Success");
             if (mySdp == null) {
-                createSdpInternal(webRtcCallbacks, false);
+                createAnswer(webRtcCallbacks);
             }
         }
 
@@ -104,6 +555,11 @@ public class JanusPluginHandle {
         }
 
         @Override
+        public void onIceConnectionReceivingChange(boolean b) {
+
+        }
+
+        @Override
         public void onIceGatheringChange(PeerConnection.IceGatheringState state) {
             switch (state) {
                 case NEW:
@@ -132,9 +588,12 @@ public class JanusPluginHandle {
         }
 
         @Override
+        public void onIceCandidatesRemoved(IceCandidate[] iceCandidates) {
+
+        }
+
+        @Override
         public void onAddStream(MediaStream stream) {
-            Log.d("JANUSCLIENT", "onAddStream " + stream.label());
-            remoteStream = stream;
             onRemoteStream(stream);
         }
 
@@ -153,313 +612,11 @@ public class JanusPluginHandle {
             Log.d("JANUSCLIENT", "Renegotiation needed");
         }
 
-    }
-
-    private PeerConnectionFactory sessionFactory = null;
-    private final JanusServer server;
-    public final JanusSupportedPluginPackages plugin;
-    public final BigInteger id;
-    private final IJanusPluginCallbacks callbacks;
-    private VideoSource videoSource;
-    private AudioSource audioSource;
-
-    private class AsyncPrepareWebRtc extends AsyncTask<IPluginHandleWebRTCCallbacks, Void, Void> {
-
         @Override
-        protected Void doInBackground(IPluginHandleWebRTCCallbacks... params) {
-            IPluginHandleWebRTCCallbacks cb = params[0];
-            prepareWebRtc(cb);
-            return null;
-        }
-    }
-
-    private class AsyncHandleRemoteJsep extends AsyncTask<IPluginHandleWebRTCCallbacks, Void, Void> {
-        @Override
-        protected Void doInBackground(IPluginHandleWebRTCCallbacks... params) {
-            IPluginHandleWebRTCCallbacks webrtcCallbacks = params[0];
-            if (sessionFactory == null) {
-                webrtcCallbacks.onCallbackError("WebRtc PeerFactory is not initialized. Please call initializeMediaContext");
-                return null;
-            }
-            JSONObject jsep = webrtcCallbacks.getJsep();
-            if (jsep != null) {
-                if (pc == null) {
-                    Log.d("JANUSCLIENT", "could not set remote offer");
-                    callbacks.onCallbackError("No peerconnection created, if this is an answer please use createAnswer");
-                    return null;
-                }
-                try {
-
-                    String sdpString = jsep.getString("sdp");
-                    Log.d("JANUSCLIENT", sdpString);
-                    SessionDescription.Type type = SessionDescription.Type.fromCanonicalForm(jsep.getString("type"));
-                    SessionDescription sdp = new SessionDescription(type, sdpString);
-                    pc.setRemoteDescription(new WebRtcObserver(webrtcCallbacks), sdp);
-                } catch (JSONException ex) {
-                    Log.d("JANUSCLIENT", ex.getMessage());
-                    webrtcCallbacks.onCallbackError(ex.getMessage());
-                }
-            }
-            return null;
-        }
-    }
-
-    public JanusPluginHandle(JanusServer server, JanusSupportedPluginPackages plugin, BigInteger handle_id, IJanusPluginCallbacks callbacks) {
-        this.server = server;
-        this.plugin = plugin;
-        id = handle_id;
-        this.callbacks = callbacks;
-        sessionFactory = new PeerConnectionFactory();
-    }
-
-    public void onMessage(String msg) {
-        try {
-            JSONObject obj = new JSONObject(msg);
-            callbacks.onMessage(obj, null);
-        } catch (JSONException ex) {
-            //TODO do we want to notify the GatewayHandler?
-        }
-    }
-
-    public void onMessage(JSONObject msg, JSONObject jsep) {
-        callbacks.onMessage(msg, jsep);
-    }
-
-    private void onLocalStream(MediaStream stream) {
-        callbacks.onLocalStream(stream);
-    }
-
-    private void onRemoteStream(MediaStream stream) {
-        callbacks.onRemoteStream(stream);
-    }
-
-    public void onDataOpen(Object data) {
-        callbacks.onDataOpen(data);
-    }
-
-    public void onData(Object data) {
-        callbacks.onData(data);
-    }
-
-    public void onCleanup() {
-        callbacks.onCleanup();
-    }
-
-    public void onDetached() {
-        callbacks.onDetached();
-    }
-
-    public void sendMessage(IPluginHandleSendMessageCallbacks obj) {
-        server.sendMessage(TransactionType.plugin_handle_message, id, obj, plugin);
-    }
-
-    private void streamsDone(IPluginHandleWebRTCCallbacks webRTCCallbacks) {
-        MediaConstraints pc_cons = new MediaConstraints();
-        pc_cons.optional.add(new MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"));
-        if (webRTCCallbacks.getMedia().getRecvAudio())
-            pc_cons.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
-        if (webRTCCallbacks.getMedia().getRecvVideo())
-            pc_cons.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveVideo", "true"));
-        pc = sessionFactory.createPeerConnection(server.iceServers, pc_cons, new WebRtcObserver(webRTCCallbacks));
-        if (myStream != null)
-            pc.addStream(myStream);
-        if (webRTCCallbacks.getJsep() == null) {
-            createSdpInternal(webRTCCallbacks, true);
-        } else {
-            try {
-                JSONObject obj = webRTCCallbacks.getJsep();
-                String sdp = obj.getString("sdp");
-                SessionDescription.Type type = SessionDescription.Type.fromCanonicalForm(obj.getString("type"));
-                SessionDescription sessionDescription = new SessionDescription(type, sdp);
-                pc.setRemoteDescription(new WebRtcObserver(webRTCCallbacks), sessionDescription);
-            } catch (Exception ex) {
-                webRTCCallbacks.onCallbackError(ex.getMessage());
-            }
-        }
-    }
-
-    public void createOffer(IPluginHandleWebRTCCallbacks webrtcCallbacks) {
-        new AsyncPrepareWebRtc().execute(webrtcCallbacks);
-    }
-
-    public void createAnswer(IPluginHandleWebRTCCallbacks webrtcCallbacks) {
-        new AsyncPrepareWebRtc().execute(webrtcCallbacks);
-    }
-
-    private void prepareWebRtc(IPluginHandleWebRTCCallbacks callbacks) {
-        if (pc != null) {
-            if (callbacks.getJsep() == null) {
-                createSdpInternal(callbacks, true);
-            } else {
-                try {
-                    JSONObject jsep = callbacks.getJsep();
-                    String sdpString = jsep.getString("sdp");
-                    SessionDescription.Type type = SessionDescription.Type.fromCanonicalForm(jsep.getString("type"));
-                    SessionDescription sdp = new SessionDescription(type, sdpString);
-                    pc.setRemoteDescription(new WebRtcObserver(callbacks), sdp);
-                } catch (JSONException ex) {
-
-                }
-            }
-        } else {
-            trickle = callbacks.getTrickle() != null ? callbacks.getTrickle() : false;
-            AudioTrack audioTrack = null;
-            VideoTrack videoTrack = null;
-            MediaStream stream = null;
-            if (callbacks.getMedia().getSendAudio()) {
-                audioSource = sessionFactory.createAudioSource(new MediaConstraints());
-                audioTrack = sessionFactory.createAudioTrack(AUDIO_TRACK_ID, audioSource);
-            }
-            if (callbacks.getMedia().getSendVideo()) {
-                VideoCapturerAndroid capturer = null;
-                switch (callbacks.getMedia().getCamera()) {
-                    case back:
-                        capturer = VideoCapturerAndroid.create(VideoCapturerAndroid.getNameOfBackFacingDevice());
-                        break;
-                    case front:
-                        capturer = VideoCapturerAndroid.create(VideoCapturerAndroid.getNameOfFrontFacingDevice());
-                        break;
-                }
-                MediaConstraints constraints = new MediaConstraints();
-                JanusMediaConstraints.JanusVideo videoConstraints = callbacks.getMedia().getVideo();
-               /* constraints.mandatory.add(new MediaConstraints.KeyValuePair("maxHeight", Integer.toString(videoConstraints.getMaxHeight())));
-                constraints.optional.add(new MediaConstraints.KeyValuePair("minHeight", Integer.toString(videoConstraints.getMinHeight())));
-                constraints.mandatory.add(new MediaConstraints.KeyValuePair("maxWidth", Integer.toString(videoConstraints.getMaxWidth())));
-                constraints.optional.add(new MediaConstraints.KeyValuePair("minWidth", Integer.toString(videoConstraints.getMinWidth())));
-                constraints.mandatory.add(new MediaConstraints.KeyValuePair("maxFrameRate", Integer.toString(videoConstraints.getMaxFramerate())));
-                constraints.optional.add(new MediaConstraints.KeyValuePair("minFrameRate", Integer.toString(videoConstraints.getMinFramerate()))); */
-                videoSource = sessionFactory.createVideoSource(capturer, constraints);
-                videoTrack = sessionFactory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
-            }
-            if (audioTrack != null || videoTrack != null) {
-                stream = sessionFactory.createLocalMediaStream(LOCAL_MEDIA_ID);
-                if (audioTrack != null)
-                    stream.addTrack(audioTrack);
-                if (videoTrack != null)
-                    stream.addTrack(videoTrack);
-            }
-            myStream = stream;
-            if (stream != null)
-                onLocalStream(stream);
-            streamsDone(callbacks);
-        }
-    }
-
-    private void createSdpInternal(IPluginHandleWebRTCCallbacks callbacks, Boolean isOffer) {
-        MediaConstraints pc_cons = new MediaConstraints();
-        pc_cons.optional.add(new MediaConstraints.KeyValuePair("DtlsSrtpKeyAgreement", "true"));
-        if (callbacks.getMedia().getRecvAudio()) {
-            pc_cons.mandatory.add(new MediaConstraints.KeyValuePair("OfferToReceiveAudio", "true"));
-        }
-        if (callbacks.getMedia().getRecvVideo()) {
-            Log.d("VIDEO_ROOM", "Receiving video");
-        }
-        if (isOffer) {
-            pc.createOffer(new WebRtcObserver(callbacks), pc_cons);
-        } else {
-            pc.createAnswer(new WebRtcObserver(callbacks), pc_cons);
-        }
-    }
-
-    public void handleRemoteJsep(IPluginHandleWebRTCCallbacks webrtcCallbacks) {
-        new AsyncHandleRemoteJsep().execute(webrtcCallbacks);
-    }
-
-    public void hangUp() {
-        if (remoteStream != null) {
-            //remoteStream.dispose();
-            remoteStream = null;
-        }
-        if (myStream != null) {
-            //myStream.dispose();
-            myStream = null;
-        }
-        if (pc != null && pc.signalingState() != PeerConnection.SignalingState.CLOSED){
-            //pc.close();
-            pc.dispose();
-        }
-        pc = null;
-        started = false;
-        mySdp = null;
-        if (dataChannel != null) {
-            dataChannel.close();
-        }
-        dataChannel = null;
-        trickle = true;
-        iceDone = false;
-        sdpSent = false;
-
-        if (videoSource != null) {
-            videoSource.dispose();
-        }
-
-        if (audioSource != null) {
-            audioSource.dispose();
-        }
-        sessionFactory.dispose();
-    }
-
-    public void detach() {
-        hangUp();
-        JSONObject obj = new JSONObject();
-        server.sendMessage(obj, JanusMessageType.detach, id);
-    }
-
-    private void onLocalSdp(SessionDescription sdp, IPluginHandleWebRTCCallbacks callbacks) {
-        if (pc != null) {
-            if (mySdp == null) {
-                mySdp = sdp;
-                pc.setLocalDescription(new WebRtcObserver(callbacks), sdp);
-            }
-            if (!iceDone && !trickle)
-                return;
-            if (sdpSent)
-                return;
-            try {
-                sdpSent = true;
-                JSONObject obj = new JSONObject();
-                obj.put("sdp", mySdp.description);
-                obj.put("type", mySdp.type.canonicalForm());
-                callbacks.onSuccess(obj);
-            } catch (JSONException ex) {
-                callbacks.onCallbackError(ex.getMessage());
-            }
-        }
-    }
-
-    private void sendTrickleCandidate(IceCandidate candidate) {
-        try {
-            JSONObject message = new JSONObject();
-            JSONObject cand = new JSONObject();
-            if (candidate == null)
-                cand.put("completed", true);
-            else {
-                cand.put("candidate", candidate.sdp);
-                cand.put("sdpMid", candidate.sdpMid);
-                cand.put("sdpMLineIndex", candidate.sdpMLineIndex);
-            }
-            message.put("candidate", cand);
-
-            server.sendMessage(message, JanusMessageType.trickle, id);
-        } catch (JSONException ex) {
+        public void onAddTrack(RtpReceiver rtpReceiver, MediaStream[] mediaStreams) {
 
         }
+
     }
 
-    private void sendSdp(IPluginHandleWebRTCCallbacks callbacks) {
-        if (mySdp != null) {
-            mySdp = pc.getLocalDescription();
-            if (!sdpSent) {
-                sdpSent = true;
-                try {
-                    JSONObject obj = new JSONObject();
-                    obj.put("sdp", mySdp.description);
-                    obj.put("type", mySdp.type.canonicalForm());
-                    callbacks.onSuccess(obj);
-                } catch (JSONException ex) {
-                    callbacks.onCallbackError(ex.getMessage());
-                }
-            }
-        }
-    }
 }

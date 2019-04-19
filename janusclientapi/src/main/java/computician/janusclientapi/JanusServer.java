@@ -71,8 +71,8 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
 
     public JanusServer(IJanusGatewayCallbacks gatewayCallbacks) {
         gatewayObserver = gatewayCallbacks;
-        System.setProperty("java.net.preferIPv6Addresses", "false");
-        System.setProperty("java.net.preferIPv4Stack", "true");
+        java.lang.System.setProperty("java.net.preferIPv6Addresses", "false");
+        java.lang.System.setProperty("java.net.preferIPv4Stack", "true");
         serverUri = gatewayObserver.getServerUri();
         iceServers = gatewayObserver.getIceServers();
         ipv6Support = gatewayObserver.getIpv6Support();
@@ -105,12 +105,12 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
         }
     }
 
-    public boolean initializeMediaContext(Context context, boolean audio, boolean video, boolean videoHwAcceleration, EGLContext eglContext) {
-        if (!PeerConnectionFactory.initializeAndroidGlobals(context, audio, video, videoHwAcceleration, eglContext))
-            return false;
-        peerConnectionFactoryInitialized = true;
-        return true;
-    }
+//    public boolean initializeMediaContext(Context context, boolean audio, boolean video, boolean videoHwAcceleration, EGLContext eglContext) {
+//        if (!PeerConnectionFactory.initializeAndroidGlobals(context, audio, video, videoHwAcceleration, eglContext))
+//            return false;
+//        peerConnectionFactoryInitialized = true;
+//        return true;
+//    }
 
     public void run() {
         Thread thisThread = Thread.currentThread();
@@ -145,10 +145,10 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
     }
 
     public void Attach(IJanusPluginCallbacks callbacks) {
-        if (!peerConnectionFactoryInitialized) {
-            callbacks.onCallbackError("Peerconnection factory is not initialized, please initialize via initializeMediaContext so that peerconnections can be made by the plugins");
-            return;
-        }
+//        if (!peerConnectionFactoryInitialized) {
+//            callbacks.onCallbackError("Peerconnection factory is not initialized, please initialize via initializeMediaContext so that peerconnections can be made by the plugins");
+//            return;
+//        }
         new AsyncAttach().execute(callbacks);
     }
 
@@ -291,12 +291,24 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
                     }
                     break;
                 }
-//                case hangup: {
+                case hangup: {
 //                    if(handle != null) {
 //                        handle.hangUp();
+//                        JSONObject plugin_data = null;
+//                        if (obj.has("plugindata"))
+//                            plugin_data = obj.getJSONObject("plugindata");
+//                        if (plugin_data != null) {
+//                            JSONObject data = null;
+//                            JSONObject jsep = null;
+//                            if (plugin_data.has("data"))
+//                                data = plugin_data.getJSONObject("data");
+//                            if (obj.has("jsep"))
+//                                jsep = obj.getJSONObject("jsep");
+//                            handle.onMessage(data, jsep);
+//                        }
 //                    }
-//                    break;
-//                }
+                    break;
+                }
                 case detached: {
                     if (handle != null) {
                         handle.onDetached();

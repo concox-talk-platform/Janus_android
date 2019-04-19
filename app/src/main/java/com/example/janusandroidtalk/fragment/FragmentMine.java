@@ -135,7 +135,6 @@ public class FragmentMine extends Fragment{
                                 Intent intent = new Intent(getActivity(),LoginActivity.class);
                                 getActivity().startActivity(intent);
                                 getActivity().finish();
-
                             }
                         })
                         .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
@@ -165,10 +164,10 @@ public class FragmentMine extends Fragment{
             imageView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    Intent intent = new Intent(context, CallActivity.class);
-                    intent.putExtra("isCall",true);
-                    intent.putExtra("name","xiaozhuzhu");
-                    context.startActivity(intent);
+//                    Intent intent = new Intent(context, CallActivity.class);
+//                    intent.putExtra("isCall",true);
+//                    intent.putExtra("name",data.getUserFriendName());
+//                    context.startActivity(intent);
                 }
             });
 

@@ -1,17 +1,26 @@
 package com.example.janusandroidtalk.signalingcontrol;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.opengl.EGLContext;
+import android.os.Bundle;
 import android.util.Log;
 
+import com.example.janusandroidtalk.MainActivity;
+import com.example.janusandroidtalk.MyApplication;
+import com.example.janusandroidtalk.activity.CallActivity;
+
 import org.json.JSONObject;
+import org.webrtc.EglBase;
 import org.webrtc.MediaStream;
 import org.webrtc.PeerConnection;
-import org.webrtc.VideoRenderer;
-import org.webrtc.VideoRendererGui;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import computician.janusclientapi.IJanusGatewayCallbacks;
 import computician.janusclientapi.IJanusPluginCallbacks;
@@ -32,7 +41,7 @@ import computician.janusclientapi.PluginHandleWebRTCCallbacks;
 public class JanusControl {
     public static final String REQUEST = "request";//信令，join,start,configure等
     public static final String MESSAGE = "message";//封装 json格式的message,通过ws发送的消息
-    public static String JANUS_URI = "ws://113.105.153.240:8188";//websocket server
+    public static String JANUS_URI = "ws://113.105.153.240:9188";//websocket server
     public static JanusPluginHandle handle = null;
     public static JanusServer janusServer;
     public static MyControlCallBack controlCallBack;
@@ -42,18 +51,12 @@ public class JanusControl {
     private static int roomId;
     private static int userId;
 
-    private static  VideoRenderer.Callbacks localRender, remoteRender;
-
     public JanusControl(MyControlCallBack controlCallBack, String userName, int userId, int roomId) {
         this.controlCallBack = controlCallBack;
         this.userName = userName;
         this.userId = userId;
         this.roomId = roomId;
-    }
-
-    public boolean initializeMediaContext(Context context, boolean audio, boolean video, boolean videoHwAcceleration, EGLContext eglContext){
         janusServer = new JanusServer(new JanusGlobalCallbacks());
-        return janusServer.initializeMediaContext(context, audio, video, videoHwAcceleration, eglContext);
     }
 
     public void Start() {
@@ -139,8 +142,39 @@ public class JanusControl {
         public void onMessage(JSONObject msg, JSONObject jsepLocal) {
             try {
                 controlCallBack.showMessage(msg,null);
-                if(jsepLocal != null) {
-                    handle.handleRemoteJsep(new PluginHandleWebRTCCallbacks(null, jsepLocal, false));
+                if(jsepLocal != null && jsepLocal.getString("type").equals("answer")) {
+                    handle.JanusSetRemoteDescription(new IPluginHandleWebRTCCallbacks() {
+                        final JSONObject myJsep = jsepLocal;
+                        @Override
+                        public void onSuccess(JSONObject obj) {
+
+                        }
+
+                        @Override
+                        public JSONObject getJsep() {
+                            return myJsep;
+                        }
+
+                        @Override
+                        public JanusMediaConstraints getMedia() {
+                            JanusMediaConstraints cons = new JanusMediaConstraints();
+                            cons.setRecvAudio(false);
+                            cons.setRecvVideo(false);
+                            cons.setSendAudio(true);
+                            cons.setSendVideo(false);
+                            return cons;
+                        }
+
+                        @Override
+                        public Boolean getTrickle() {
+                            return Boolean.FALSE;
+                        }
+
+                        @Override
+                        public void onCallbackError(String error) {
+
+                        }
+                    });
                 }
             } catch (Exception ex) {
 
@@ -197,7 +231,7 @@ public class JanusControl {
     //发送pocRoom Offer信令
     public static void sendPocRoomCreateOffer(final MyControlCallBack myControlCallBack){
         if(handle != null) {
-            handle.createOffer(new IPluginHandleWebRTCCallbacks() {
+            handle.createPeerConnection(new IPluginHandleWebRTCCallbacks() {
                 @Override
                 public void onSuccess(JSONObject obj) {
                     try
@@ -226,6 +260,7 @@ public class JanusControl {
                     cons.setRecvAudio(false);
                     cons.setRecvVideo(false);
                     cons.setSendAudio(true);
+                    cons.setSendVideo(false);
                     return cons;
                 }
 
@@ -380,7 +415,7 @@ public class JanusControl {
             body.put("room", changeRoomId);
             body.put("id", userId);
             body.put("display", userName);
-            body.put("muted", true);
+            body.put("muted", false);
             msg.put(MESSAGE, body);
             handle.sendMessage(new IPluginHandleSendMessageCallbacks() {
                 @Override
@@ -467,26 +502,23 @@ public class JanusControl {
       @Override
       public void onMessage(JSONObject msg,final JSONObject jsepLocal) {
           try {
-              if(msg.getString("videocall").equals("event")){// 信令成功
-                  if(msg.getJSONObject("result").getString("event").equals("registered")){
-                      controlCallBack.showMessage(msg ,jsepLocal);
-                  }else if(msg.getJSONObject("result").getString("event").equals("calling")){
-                      controlCallBack.showMessage(msg ,jsepLocal);
-                  }else if(msg.getJSONObject("result").getString("event").equals("incomingcall")){
-                      controlCallBack.showMessage(msg ,jsepLocal);
-                  }else if(msg.getJSONObject("result").getString("event").equals("accepted")){
-                      controlCallBack.showMessage(msg ,jsepLocal);
-                  }else if(msg.getJSONObject("result").getString("event").equals("set")){
-                      controlCallBack.showMessage(msg ,jsepLocal);
-                  }else if(msg.getJSONObject("result").getString("event").equals("update")){
-                      controlCallBack.showMessage(msg ,jsepLocal);
-                  }else if(msg.getJSONObject("result").getString("event").equals("hangup")){
+              if(msg.has("result") && jsepLocal != null){
+                  if(msg.getJSONObject("result").getString("event").equals("incomingcall")){
+                      Intent intent = new Intent(getCurrentActivity(), CallActivity.class);
+                      Bundle bundle = new Bundle();
+                      bundle.putString("name", msg.getJSONObject("result").getString("username"));
+                      bundle.putString("jsep",jsepLocal.toString());
+                      bundle.putBoolean("isCall",false);
+                      intent.putExtras(bundle);
+                      getCurrentActivity().startActivity(intent);
+                  }else{
                       controlCallBack.showMessage(msg ,jsepLocal);
                   }
+              }else{
+                  controlCallBack.showMessage(msg ,jsepLocal);
               }
-
               if(jsepLocal != null && jsepLocal.getString("type").equals("answer")) {
-                  handle.handleRemoteJsep(new IPluginHandleWebRTCCallbacks() {
+                  handle.JanusSetRemoteDescription(new IPluginHandleWebRTCCallbacks() {
                       final JSONObject myJsep = jsepLocal;
                       @Override
                       public void onSuccess(JSONObject obj) {
@@ -500,7 +532,11 @@ public class JanusControl {
 
                       @Override
                       public JanusMediaConstraints getMedia() {
-                          return null;
+                          JanusMediaConstraints cons = new JanusMediaConstraints();
+                          cons.setRecvAudio(false);
+                          cons.setRecvVideo(false);
+                          cons.setSendAudio(true);
+                          return cons;
                       }
 
                       @Override
@@ -520,23 +556,18 @@ public class JanusControl {
           }
       }
 
-      @Override
-      public void onLocalStream(MediaStream stream) {
-          stream.videoTracks.get(0).addRenderer(new VideoRenderer(localRender));
-          VideoRendererGui.update(localRender, 2, 2, 30, 30, VideoRendererGui.ScalingType.SCALE_ASPECT_FILL, false);
-      }
+        @Override
+        public void onLocalStream(MediaStream stream) {
+            controlCallBack.onSetLocalStream(stream);
+        }
 
-      @Override
-      public void onRemoteStream(MediaStream stream) {
-          stream.videoTracks.get(0).setEnabled(true);
-          if(stream.videoTracks.get(0).enabled())
-              Log.d("JANUSCLIENT", "video tracks enabled");
-          stream.videoTracks.get(0).addRenderer(new VideoRenderer(remoteRender));
-          VideoRendererGui.update(remoteRender, 68, 2, 30, 30, VideoRendererGui.ScalingType.SCALE_ASPECT_FILL, true);
-          VideoRendererGui.update(localRender, 2, 2, 30, 30, VideoRendererGui.ScalingType.SCALE_ASPECT_FILL, false);
-      }
+        @Override
+        public void onRemoteStream(MediaStream stream) {
+            controlCallBack.onAddRemoteStream(stream);
+        }
 
-      @Override
+
+        @Override
       public void onDataOpen(Object data) {
 
       }
@@ -566,6 +597,13 @@ public class JanusControl {
 
       }
   }
+    public static void janusControlCreatePeerConnectionFactory(Context context,EglBase rootEglBase){
+        handle.createPeerConnectionFactory(context,rootEglBase);
+    }
+
+    public static void janusControlCreatePeerConnectionFactory(Context context){
+        handle.createPeerConnectionFactory(context);
+    }
 
     //register信令
     public static void sendRegister(){
@@ -613,15 +651,13 @@ public class JanusControl {
     }
 
     //offer信令
-    public static void sendVideoCallCreateOffer(final MyControlCallBack myControlCallBack,final String remoteName , VideoRenderer.Callbacks mlocalRender, VideoRenderer.Callbacks mremoteRender){
-        localRender = mlocalRender;
-        remoteRender = mremoteRender;
+    public static void sendVideoCallCreateOffer(final MyControlCallBack myControlCallBack,final String remoteName){
         if(handle != null) {
-            handle.createOffer(new IPluginHandleWebRTCCallbacks() {
+            controlCallBack = myControlCallBack;
+            handle.createPeerConnection(new IPluginHandleWebRTCCallbacks() {
                 @Override
                 public void onSuccess(JSONObject obj) {
                     try {
-                        controlCallBack = myControlCallBack;
                         JSONObject msg = new JSONObject();
                         JSONObject body = new JSONObject();
                         body.put(REQUEST, "call");
@@ -642,8 +678,8 @@ public class JanusControl {
                 @Override
                 public JanusMediaConstraints getMedia() {
                     JanusMediaConstraints cons = new JanusMediaConstraints();
-                    cons.setRecvAudio(true);
-                    cons.setRecvVideo(true);
+                    cons.setRecvAudio(false);
+                    cons.setRecvVideo(false);
                     cons.setSendAudio(true);
                     return cons;
                 }
@@ -661,15 +697,13 @@ public class JanusControl {
         }
     }
 
-    public static void sendVideoCallCreateAnswer(final MyControlCallBack myControlCallBack , final JSONObject jsepLocal , VideoRenderer.Callbacks mlocalRender, VideoRenderer.Callbacks mremoteRender){
+    public static void sendVideoCallCreateAnswer(final MyControlCallBack myControlCallBack , final JSONObject jsepLocal ){
+        controlCallBack = myControlCallBack;
         if(handle != null) {
-            localRender = mlocalRender;
-            remoteRender = mremoteRender;
-            handle.createAnswer(new IPluginHandleWebRTCCallbacks() {
+            handle.createPeerConnection(new IPluginHandleWebRTCCallbacks() {
                 @Override
                 public void onSuccess(JSONObject obj) {
                     try {
-                        controlCallBack = myControlCallBack;
                         JSONObject msg = new JSONObject();
                         JSONObject body = new JSONObject();
                         body.put(REQUEST, "accept");
@@ -724,6 +758,39 @@ public class JanusControl {
     /**
      * video Call插件----
      * */
+
+    public static Activity getCurrentActivity () {
+        try {
+            Class activityThreadClass = Class.forName("android.app.ActivityThread");
+            Object activityThread = activityThreadClass.getMethod("currentActivityThread").invoke(
+                    null);
+            Field activitiesField = activityThreadClass.getDeclaredField("mActivities");
+            activitiesField.setAccessible(true);
+            Map activities = (Map) activitiesField.get(activityThread);
+            for (Object activityRecord : activities.values()) {
+                Class activityRecordClass = activityRecord.getClass();
+                Field pausedField = activityRecordClass.getDeclaredField("paused");
+                pausedField.setAccessible(true);
+                if (!pausedField.getBoolean(activityRecord)) {
+                    Field activityField = activityRecordClass.getDeclaredField("activity");
+                    activityField.setAccessible(true);
+                    Activity activity = (Activity) activityField.get(activityRecord);
+                    return activity;
+                }
+            }
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
 
 }
 

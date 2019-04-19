@@ -13,11 +13,12 @@ import android.widget.ImageView;
 import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
-import com.example.janusandroidtalk.signalingcontrol.AudioBridgeControl;
+import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.webrtc.MediaStream;
 
 /**
  * Author:xishuang
@@ -59,7 +60,7 @@ public class FloatLayout extends FrameLayout implements MyControlCallBack {
                 mTouchStartX = event.getX();
                 mTouchStartY = event.getY();
                 mFloatView.setImageResource(R.mipmap.audio_gray);
-                AudioBridgeControl.sendTalk(FloatLayout.this);
+                JanusControl.sendTalk(FloatLayout.this);
                 break;
             case MotionEvent.ACTION_MOVE:
                 // 更新浮动窗口位置参数
@@ -68,7 +69,7 @@ public class FloatLayout extends FrameLayout implements MyControlCallBack {
                 mWindowManager.updateViewLayout(this, mWmParams);
                 break;
             case MotionEvent.ACTION_UP:
-                AudioBridgeControl.sendConfigure(FloatLayout.this,true);
+                JanusControl.sendConfigure(FloatLayout.this,true);
                 break;
         }
         //响应点击事件
@@ -95,7 +96,7 @@ public class FloatLayout extends FrameLayout implements MyControlCallBack {
     public void showMessage(final JSONObject msg,JSONObject jsepLocal) {
         try{
             if(msg.getString("pocroom").equals("talked")){
-                if(msg.getInt("talk") == 0 || (msg.getInt("talk") == MyApplication.getUserId()) ){
+                if(msg.getInt("id") == 0 || (msg.getInt("id") == MyApplication.getUserId()) ){
                     Message message1 = new Message();
                     message1.what = 1;
                     handler.sendMessage(message1);
@@ -110,7 +111,7 @@ public class FloatLayout extends FrameLayout implements MyControlCallBack {
                 handler.sendMessage(message3);
             }else if(msg.getString("pocroom").equals("configured")){
                if(msg.getBoolean("muted")){
-                   AudioBridgeControl.sendUnTalk(FloatLayout.this);
+                   JanusControl.sendUnTalk(FloatLayout.this);
                }
             }
         } catch (JSONException e) {
@@ -119,11 +120,21 @@ public class FloatLayout extends FrameLayout implements MyControlCallBack {
 
     }
 
+    @Override
+    public void onSetLocalStream(MediaStream stream) {
+
+    }
+
+    @Override
+    public void onAddRemoteStream(MediaStream stream) {
+
+    }
+
     private Handler handler = new Handler() {
         public void handleMessage(android.os.Message msg) {
             switch (msg.what) {
                 case 1:
-                    AudioBridgeControl.sendConfigure(FloatLayout.this,false);
+                    JanusControl.sendConfigure(FloatLayout.this,false);
                     break;
                 case 2:
                     mFloatView.setImageResource(R.mipmap.audio_red);

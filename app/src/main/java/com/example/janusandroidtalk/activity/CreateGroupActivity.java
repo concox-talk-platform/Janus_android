@@ -1,12 +1,15 @@
 package com.example.janusandroidtalk.activity;
 
+import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
@@ -28,12 +31,13 @@ import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
-import com.example.janusandroidtalk.signalingcontrol.AudioBridgeControl;
+import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
 import com.example.janusandroidtalk.tools.AppTools;
 
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.webrtc.MediaStream;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -101,13 +105,31 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
         menu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                //创建群组
-                for (UserFriendBean userFriendBean: myList) {
-                    if(userFriendBean.isCheck()){
-                        userIds = userIds +","+userFriendBean.getUserFriendId();
-                    }
-                }
-                new GrpcCreateGroupTask().execute(userIds);
+                final EditText editText = new EditText(CreateGroupActivity.this);
+                final AlertDialog dialog = new AlertDialog.Builder(CreateGroupActivity.this)
+                        .setTitle(R.string.dialog_message_group_name)
+                        .setView(editText)
+                        .setPositiveButton(R.string.dialog_commit, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                if(!TextUtils.isEmpty(editText.getText().toString())){
+                                    dialog.dismiss();
+                                    for (UserFriendBean userFriendBean: myList) {
+                                        if(userFriendBean.isCheck()){
+                                            userIds = userIds +","+userFriendBean.getUserFriendId();
+                                        }
+                                    }
+                                    new GrpcCreateGroupTask().execute(userIds,editText.getText().toString());
+                                }
+                            }
+                        })
+                        .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        }).create();
+                dialog.show();
             }
         });
 
@@ -294,10 +316,8 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
 
         @Override
         protected TalkCloudApp.CreateGroupResp doInBackground(String... params) {
-            String groupName = "";
             int accountId = 0;
             if(UserBean.getUserBean() != null){
-                groupName = UserBean.getUserBean().getUserName()+"的群组"+ (int)(Math.random()*100);
                 accountId = UserBean.getUserBean().getUserId();
             }
 
@@ -305,7 +325,7 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
             try {
                 channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
                 TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.CreateGroupReq regReq = TalkCloudApp.CreateGroupReq.newBuilder().setDeviceIds(params[0]).setGroupName(groupName).setAccountId(accountId).build();
+                TalkCloudApp.CreateGroupReq regReq = TalkCloudApp.CreateGroupReq.newBuilder().setDeviceIds(params[0]).setGroupName(params[1]).setAccountId(accountId).build();
                 replay = stub.createGroup(regReq);
                 return replay;
             } catch (Exception e) {
@@ -332,7 +352,8 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
                 return;
             } else {
                 //创建成功
-                AudioBridgeControl.sendCreateGroup(CreateGroupActivity.this,(int)(result.getGroupInfo().getGid()));
+                JanusControl.sendCreateGroup(CreateGroupActivity.this,(int)(result.getGroupInfo().getGid()));
+                CreateGroupActivity.this.finish();
             }
 
         }
@@ -355,6 +376,16 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
         } catch (JSONException e) {
             e.printStackTrace();
         }
+
+    }
+
+    @Override
+    public void onSetLocalStream(MediaStream stream) {
+
+    }
+
+    @Override
+    public void onAddRemoteStream(MediaStream stream) {
 
     }
 

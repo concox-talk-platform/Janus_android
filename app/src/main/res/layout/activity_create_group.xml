@@ -48,7 +48,6 @@
         </RelativeLayout>
     </android.support.v7.widget.Toolbar>
 
-
     <EditText
         android:id="@+id/create_group_edit"
         android:layout_width="match_parent"
@@ -63,7 +62,6 @@
         android:padding="5dp"
         android:singleLine="true"
         android:inputType="text"
-        android:focusable="false"
         android:drawableLeft="@drawable/ic_search_black_24dp"
         android:imeOptions="actionSearch" />
 

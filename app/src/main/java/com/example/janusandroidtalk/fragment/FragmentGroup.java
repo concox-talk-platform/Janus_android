@@ -4,7 +4,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.opengl.EGLContext;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -20,7 +19,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
-import com.example.janusandroidtalk.MainActivity;
 import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.activity.CreateGroupActivity;
@@ -33,19 +31,16 @@ import com.example.janusandroidtalk.pullrecyclerview.BaseRecyclerAdapter;
 import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
 import com.example.janusandroidtalk.pullrecyclerview.layoutmanager.XLinearLayoutManager;
-import com.example.janusandroidtalk.signalingcontrol.AudioBridgeControl;
+import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
 import com.example.janusandroidtalk.tools.AppTools;
-import com.example.janusandroidtalk.webrtctest.AppRTCAudioManager;
 
 import org.json.JSONException;
 import org.json.JSONObject;
-import org.webrtc.VideoRendererGui;
+import org.webrtc.MediaStream;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
@@ -64,7 +59,9 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
 
     private ImageView menu;
 
-    private AudioBridgeControl audioBridgeControl;
+    private JanusControl janusControl;
+
+    private int changeroomid;
 
     public FragmentGroup() {
     }
@@ -104,14 +101,11 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             myList = UserBean.getUserBean().getUserGroupBeanArrayList();
         }
 
-        //启动ws链接，配置插件，如果存在默认房间的话，则直接进入，否则需要创建完房间，并刷新之后再启动进入房间
-//        EGLContext con = VideoRendererGui.getEGLContext();
-//        audioBridgeControl = new AudioBridgeControl(MyApplication.getUserName(),MyApplication.getUserId(),MyApplication.getDefaultGroupId(),FragmentGroup.this);
-//        audioBridgeControl.initializeMediaContext(getActivity(), true, true, true, con);
-//        audioBridgeControl.Start();
-
         mAdapter = new GroupListAdapter(getActivity(), R.layout.fragment_group_list_item, myList);
         mPullRecyclerView.setAdapter(mAdapter);
+
+        janusControl = new JanusControl(this,MyApplication.getUserName(),MyApplication.getUserId(),MyApplication.getDefaultGroupId());
+        janusControl.Start();
 
         mPullRecyclerView.setOnRecyclerRefreshListener(new PullRecyclerView.OnRecyclerRefreshListener() {
             @Override
@@ -202,7 +196,7 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             ArrayList<UserGroupBean> userGroupBeanArrayList = new ArrayList<UserGroupBean>();
             for (TalkCloudApp.GroupInfo groupRecord : result.getGroupListList()) {
                 UserGroupBean userGroupBean = new UserGroupBean();
-                userGroupBean.setUserGroupId((int)groupRecord.getGid());
+                userGroupBean.setUserGroupId(groupRecord.getGid());
                 userGroupBean.setUserGroupName(groupRecord.getGroupName());
                 userGroupBeanArrayList.add(userGroupBean);
             }
@@ -216,7 +210,7 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             //如果没有默认房间，创建新群组刷新之后，将会默认进入第一个群组里面，
             if(MyApplication.getDefaultGroupId() == 0 && userGroupBeanArrayList.size()>0){
                 MyApplication.setDefaultGroupId(userGroupBeanArrayList.get(0).getUserGroupId());
-                AudioBridgeControl.sendJoinRoom(FragmentGroup.this,MyApplication.getDefaultGroupId());
+                JanusControl.sendPocRoomJoinRoom(FragmentGroup.this,MyApplication.getDefaultGroupId());
             }
         }
     }
@@ -253,7 +247,8 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                                 @Override
                                 public void onClick(DialogInterface dialog, int which) {
                                     //发送changeRoom信令 ,data.get("gid"),并在回调成功之后，保存默认群组Id,
-                                    AudioBridgeControl.sendChangeGroup(FragmentGroup.this, data.getUserGroupId());
+                                    JanusControl.sendChangeGroup(FragmentGroup.this, data.getUserGroupId());
+                                    changeroomid = data.getUserGroupId();
                                     dialog.dismiss();
                                 }
                             })
@@ -272,7 +267,11 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
 
     @Override
     public void janusServer(Boolean isOk) {
+        if(isOk){
+            JanusControl.sendAttachPocRoomPlugin(this);
+        }else{
 
+        }
     }
 
     @Override
@@ -280,11 +279,12 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
         try {
             if (msg.getString("pocroom").equals("audiobridgeisok")) {
                 //创建链接成功，
+                JanusControl.janusControlCreatePeerConnectionFactory(getActivity());
                 if(MyApplication.getDefaultGroupId()!=0){//不为空才直接加入房间
-                    AudioBridgeControl.sendJoinRoom(FragmentGroup.this,MyApplication.getDefaultGroupId());
+                    JanusControl.sendPocRoomJoinRoom(FragmentGroup.this,MyApplication.getDefaultGroupId());
                 }
             }else if(msg.getString("pocroom").equals("joined")){//加入房间成功，开始创建offer,进行webRtc链接
-                AudioBridgeControl.sendCreateOffer(FragmentGroup.this);
+                JanusControl.sendPocRoomCreateOffer(FragmentGroup.this);
             }else if(msg.getString("pocroom").equals("event")){//"configure" 信令成功
 
             }else if(msg.getString("pocroom").equals("webRtcisok")){//webRtc链接成功
@@ -295,12 +295,22 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                 //保存新的默认群组ID
                 MyApplication.setDefaultGroupId(msg.getInt("room"));
                 Message message = new Message();
-                message.what = 1;
+                message.what = 3;
                 handler.sendMessage(message);
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    @Override
+    public void onSetLocalStream(MediaStream stream) {
+
+    }
+
+    @Override
+    public void onAddRemoteStream(MediaStream stream) {
+
     }
 
     private Handler handler = new Handler() {
@@ -317,6 +327,10 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                         //开启悬浮窗
                         FloatActionController.getInstance().startMonkServer(getActivity());
                     }
+                    break;
+                case 3:
+                    mAdapter.notifyDataSetChanged();
+                    MyApplication.setDefaultGroupId(changeroomid);
                     break;
             }
         };

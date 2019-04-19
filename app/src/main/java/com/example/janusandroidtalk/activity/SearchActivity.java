@@ -70,9 +70,11 @@ public class SearchActivity extends AppCompatActivity {
         switch (searchType){
             case 0:
                 toolbarTitle.setText(R.string.search_str_group);
+                editSearch.setHint(R.string.search_str_group);
                 break;
             case 1:
                 toolbarTitle.setText(R.string.search_str_friend);
+                editSearch.setHint(R.string.search_str_friend);
                 break;
         }
 

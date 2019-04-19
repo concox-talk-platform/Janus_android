@@ -3,6 +3,9 @@ package com.example.janusandroidtalk.activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.view.Window;
+import android.view.WindowManager;
+
 import com.example.janusandroidtalk.MainActivity;
 import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
@@ -10,9 +13,14 @@ import com.example.janusandroidtalk.R;
 public class LaunchActivity extends AppCompatActivity {
 
     protected void onCreate(Bundle savedInstanceState) {
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().addFlags(
+                WindowManager.LayoutParams.FLAG_FULLSCREEN
+                        | WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+                        | WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
+                        | WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED
+                        | WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
         super.onCreate(savedInstanceState);
-        //getWindow().addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        //getSupportActionBar().hide();
         setContentView(R.layout.activity_launch);
         Thread myThread=new Thread(){
             @Override

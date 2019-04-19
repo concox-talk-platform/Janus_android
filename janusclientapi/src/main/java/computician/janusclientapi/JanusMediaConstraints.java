@@ -72,6 +72,7 @@ public class JanusMediaConstraints {
     }
 
     private boolean sendAudio = true;
+    private boolean sendVideo = true;
     private JanusVideo video = new JanusVideo();
     private boolean recvVideo = true;
     private boolean recvAudio = true;
@@ -83,9 +84,12 @@ public class JanusMediaConstraints {
     public JanusVideo getVideo() {
         return video;
     }
+    public void setSendVideo(boolean sendVideo){
+        this.sendVideo = sendVideo;
+    }
 
     public Boolean getSendVideo() {
-        return video != null;
+        return sendVideo;
     }
 
     public void setVideo(JanusVideo video) {

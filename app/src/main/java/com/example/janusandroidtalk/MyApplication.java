@@ -76,6 +76,14 @@ public class MyApplication extends Application {
         return sharedPreferences.getString("userName","");
     }
 
+    public static void setPassword(String userName){
+        sharedPreferencesEditor.putString("password",userName);
+        sharedPreferencesEditor.commit();
+    }
+    public static String getPassword(){
+        return sharedPreferences.getString("password","");
+    }
+
     /**
      * 清楚所有的sharedPreferences数据
      * */
