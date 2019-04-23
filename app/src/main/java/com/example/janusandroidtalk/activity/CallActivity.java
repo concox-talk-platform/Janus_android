@@ -19,6 +19,7 @@ import android.widget.Toast;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
+import com.example.janusandroidtalk.webrtc.ProxyVideoSink;
 
 import org.json.JSONException;
 import org.json.JSONObject;

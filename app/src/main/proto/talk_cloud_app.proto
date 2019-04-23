@@ -15,6 +15,16 @@ service TalkCloud {
     }
     rpc Logout (LogoutReq) returns (LogoutRsp) {
     }
+    rpc SetLockGroupId (SetLockGroupIdReq) returns (SetLockGroupIdResp) {
+    };
+
+    // 推送im数据
+    rpc ImMessagePublish (ImMsgReqData) returns (ImMsgRespData) {
+    };
+
+    // 登陆数据、IM离线数据、心跳
+    rpc DataPublish (stream StreamRequest) returns (stream StreamResponse) {
+    };
 
     // 好友管理
     rpc AddFriend (FriendNewReq) returns (FriendNewRsp) {
@@ -42,15 +52,6 @@ service TalkCloud {
     rpc SearchGroup (GrpSearchReq) returns (GroupListRsp) {
     }
 
-    // 离线消息拉取
-    rpc AddMsg (MsgNewReq) returns (MsgNewRsp) {
-    }
-    rpc GetMsg (MsgReq) returns (MsgRsp) {
-    }
-    rpc SetMsgStat (MsgStatReq) returns (MsgStatRsp) {
-    }
-    rpc DelMsg (MsgDelReq) returns (MsgDelRsp) {
-    }
 }
 
 /*************** Register ***************/
@@ -100,6 +101,35 @@ message LoginRsp {
     Result res = 4;
 }
 
+//// 登录请求处理需要的数据 // 和Login的一样
+//message LoginReqData {
+//    Head head = 1;
+//    string name = 2;
+//    string passwd = 3;
+//}
+
+//// 初次登录应该返回的数据   // 和之前的版本一样
+//message loginRespData {
+//    Member userInfo = 1;
+//    repeated FriendRecord friend_list = 2;
+//    repeated GroupInfo group_list = 3;
+//    Result res = 4;
+//}
+
+// 获取ImMsg请求  // 实际用不到
+message ImMsgReqData {
+    int32 id = 1; // 谁发的，
+    int32 ReceiverType = 2; // 是单独，还是发给群组
+    int32 ReceiverId = 3; // 接受者的id，群组就是群组id
+    string ResourcePath = 4; // 资源文件路径
+    int32 MsgType = 5;
+}
+
+// http client 返回数据
+message ImMsgRespData {
+    Result result = 1;
+}
+
 // 登出请求
 message LogoutReq {
     Head head = 1;
@@ -108,6 +138,87 @@ message LogoutReq {
 
 message LogoutRsp {
     Result res = 1;
+}
+
+// 设置群组锁定
+message SetLockGroupIdReq {
+    int32 uId = 1;
+    int32 gId = 2;
+}
+
+message SetLockGroupIdResp {
+    Result Res = 1;
+}
+
+//message keepAliveReq {
+//    int32 uid = 1; // 用户id
+//    int32 ACK = 2;
+//}
+
+//message keepAliveResp {
+//    int32 uid = 1;
+//    int32 SYN = 2; // 服务端向客户端推送syn=1，在线
+//}
+
+/**
+	FIRST_LOGIN_DATA   = 1 // 初次登录返回的数据。比如用户列表，群组列表，该用户的个人信息
+	OFFLINE_IM_MSG     = 2 // 用户离线时的IM数据
+	IM_MSG_FROM_UPLOAD = 3 // APP和web通过httpClient上传的IM信息
+	KEEP_ALIVE_MSG     = 4 // 用户登录后，每隔interval秒向stream发送一个消息，测试能不能连通
+*/
+
+message StreamRequest {
+    int32 uid = 1;
+    int32 dataType = 2; // 具体值 1 登录， 2 是离线数据 3 是 Im
+
+    string name = 3;
+    string passwd = 4;
+
+//    int32 ACK = 5;
+
+    UploadFileData FileDataReq = 6;
+
+    ImMsgReqData imMsg = 7;
+
+}
+
+message UploadFileData {
+    int32 id = 1; // 谁发的，是单独，还是发给群组
+    int32 sendType = 2;
+    int32 ReceiverId = 3; // 接受者的id，群组就是群组id
+}
+
+message ImReceiver {
+    int32 type = 1; // 1 是发送给群组， 2是发送给个人
+    GroupInfo groupInfo = 2;
+    Member userInfo = 3;
+}
+
+
+message StreamResponse {
+    int32 uid = 1;
+    int32 DataType = 2; // 1 是返回登录数据， 2是推送ImMsgData， 3 是keepalive
+    FirstLoginData loginResp = 3;
+    ImMsgReqData imMsgData = 4;
+    KeepAlive keepAlive = 5;
+    Result res = 6;
+}
+
+message FirstLoginData {
+    Member userInfo = 1;
+    repeated FriendRecord friend_list = 2;
+    repeated GroupInfo group_list = 3;
+}
+
+message KeepAlive {
+    int32 uid = 1;
+    int32 SYN = 2;
+}
+
+message ImMsgData {
+    int32 uid = 1;
+    string path = 2;
+    ImReceiver receiver = 3;
 }
 
 /************** User_Friend *************/
@@ -153,10 +264,13 @@ message UserSearchReq {
 
 message UserRecord {
     int32 uid = 1;
-    string name = 2;
-    int32 user_type = 3;
-    int32 grp_role = 4;
-    bool isFriend = 5;
+    string imei = 2;
+    string name = 3;
+    int32 online = 4;
+    int32 LockGroupId = 5;
+    int32 user_type = 6;   // 用户类型
+    int32 grp_role = 7;   // 2 群组  1 普通群成员
+    bool isFriend =8;    // 是否是好友
 }
 
 message UserSearchRsp {
@@ -230,7 +344,9 @@ message GrpListReq {
 message GroupInfo {
     int32 gid = 1;
     string group_name = 2;
-    bool isExist = 3;
+    int32 group_manager = 3;
+    repeated UserRecord usr_list = 4;     // 群里的成员
+    bool isExist = 5;    // 该用户是否默认在这个组
 }
 
 // 返回模糊查找以及目前用户所在的群组
@@ -244,72 +360,4 @@ message GroupListRsp {
 message GrpSearchReq {
     int32 uid = 1;
     string target = 2;
-}
-
-message GrpMemberList {
-    int32 gid = 1;
-    string group_name = 2;
-    repeated UserRecord usr_list = 3;
-}
-
-/************Msg***********/
-enum MsgType {
-    PLAIN_TEXT = 0; // 普通文本
-    IMAGE = 1; // 图片
-    AUDIO = 2; // 音频
-    VIDEO = 3; // 视频
-    LOCATION = 4; // 位置
-}
-
-enum MsgStat {
-    MSG_UNREAD = 0;
-    MSG_READ = 1;
-}
-
-message MsgNewReq {
-    repeated int32 uids = 1;
-    int32 sender_id = 2;
-    MsgType msg_type = 3;
-    string content = 4;
-    int32 create_time = 5;
-}
-
-message MsgNewRsp {
-    Result res = 1;
-}
-
-message MsgReq {
-    int32 uid = 1;
-    MsgStat stat = 2;
-}
-
-message MsgData {
-    int32 msg_id = 1;
-    int32 sender_id = 2;
-    MsgType msg_type = 3;
-    string content = 4;
-    int32 create_time = 5;
-}
-
-message MsgRsp {
-    int32 uid = 1;
-    MsgStat stat = 2;
-    repeated MsgData msg_list = 3;
-}
-
-message MsgStatReq {
-    repeated int32 msg_ids = 1;
-    MsgStat stat = 2;
-}
-
-message MsgStatRsp {
-    Result res = 1;
-}
-
-message MsgDelReq {
-    repeated int32 msg_ids = 1;
-}
-
-message MsgDelRsp {
-    Result res = 1;
 }

@@ -21,9 +21,11 @@ import android.widget.Toast;
 
 import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
-import com.example.janusandroidtalk.activity.CreateGroupActivity;
+import com.example.janusandroidtalk.activity.GroupCreateActivity;
+import com.example.janusandroidtalk.activity.GroupMemberListActivity;
 import com.example.janusandroidtalk.activity.SearchActivity;
 import com.example.janusandroidtalk.bean.UserBean;
+import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.floatwindow.permission.FloatPermissionManager;
@@ -133,10 +135,11 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             }
         });
 
+        //创建群组
         menu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(new Intent(getContext(), CreateGroupActivity.class));
+                startActivity(new Intent(getContext(), GroupCreateActivity.class));
             }
         });
 
@@ -198,6 +201,21 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                 UserGroupBean userGroupBean = new UserGroupBean();
                 userGroupBean.setUserGroupId(groupRecord.getGid());
                 userGroupBean.setUserGroupName(groupRecord.getGroupName());
+                ArrayList<UserFriendBean> memberList = new ArrayList<>();
+                for (TalkCloudApp.UserRecord userRecord: groupRecord.getUsrListList()) {
+                    UserFriendBean  userFriendBean1 = new UserFriendBean();
+                    userFriendBean1.setUserFriendName(userRecord.getName());
+                    userFriendBean1.setUserFriendId(userRecord.getUid());
+                    userFriendBean1.setGroupRole(userRecord.getGrpRole());
+                    if(userRecord.getUid() == MyApplication.getUserId() && userRecord.getGrpRole() == 2){
+                        userGroupBean.setUserGroupRole(2);
+                    }else{
+                        userGroupBean.setUserGroupRole(1);
+                    }
+                    userFriendBean1.setOnline(userRecord.getOnline());
+                    memberList.add(userFriendBean1);
+                }
+                userGroupBean.setUserFriendBeanArrayList(memberList);
                 userGroupBeanArrayList.add(userGroupBean);
             }
             myList.addAll(userGroupBeanArrayList);
@@ -237,6 +255,15 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             } else {
                 imageView.setImageResource(R.drawable.ic_lock_open_black_24dp);
             }
+
+            linearLayout.setOnClickListener(new View.OnClickListener(){
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(getContext(), GroupMemberListActivity.class);
+                    intent.putExtra("groupPosition", position);
+                    startActivity(intent);
+                }
+            });
 
             imageView.setOnClickListener(new View.OnClickListener() {
                 @Override
@@ -293,7 +320,7 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                 handler.sendMessage(message2);
             }else if (msg.getString("pocroom").equals("roomchanged")) {
                 //保存新的默认群组ID
-                MyApplication.setDefaultGroupId(msg.getInt("room"));
+                //MyApplication.setDefaultGroupId(msg.getInt("room"));
                 Message message = new Message();
                 message.what = 3;
                 handler.sendMessage(message);
@@ -329,16 +356,11 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                     }
                     break;
                 case 3:
-                    mAdapter.notifyDataSetChanged();
                     MyApplication.setDefaultGroupId(changeroomid);
+                    mAdapter.notifyDataSetChanged();
                     break;
             }
         };
     };
 
-
-    private void onAudioManagerChangedState() {
-        // TODO(henrika): disable video if AppRTCAudioManager.AudioDevice.EARPIECE
-        // is active.
-    }
 }

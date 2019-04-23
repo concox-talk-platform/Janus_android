@@ -415,7 +415,7 @@ public class JanusControl {
             body.put("room", changeRoomId);
             body.put("id", userId);
             body.put("display", userName);
-            body.put("muted", false);
+            body.put("muted", true);
             msg.put(MESSAGE, body);
             handle.sendMessage(new IPluginHandleSendMessageCallbacks() {
                 @Override

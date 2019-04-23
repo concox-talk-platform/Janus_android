@@ -4,9 +4,12 @@ import java.io.Serializable;
 
 public class UserFriendBean implements Serializable {
     private String userFriendName;
-    private long userFriendId;
+    private int userFriendId;
     private boolean userFriendLoginState;
+    private int online;////1不在线，2在线
+    private int groupRole; //2 群主  1 普通群成员
     private boolean isCheck;
+    private boolean isInGroup;
 
     public String getUserFriendName() {
         return userFriendName;
@@ -16,11 +19,11 @@ public class UserFriendBean implements Serializable {
         this.userFriendName = userFriendName;
     }
 
-    public long getUserFriendId() {
+    public int getUserFriendId() {
         return userFriendId;
     }
 
-    public void setUserFriendId(long userFriendId) {
+    public void setUserFriendId(int userFriendId) {
         this.userFriendId = userFriendId;
     }
 
@@ -38,6 +41,30 @@ public class UserFriendBean implements Serializable {
 
     public void setCheck(boolean check) {
         isCheck = check;
+    }
+
+    public boolean isInGroup() {
+        return isInGroup;
+    }
+
+    public void setInGroup(boolean inGroup) {
+        isInGroup = inGroup;
+    }
+
+    public int getOnline() {
+        return online;
+    }
+
+    public void setOnline(int online) {
+        this.online = online;
+    }
+
+    public int getGroupRole() {
+        return groupRole;
+    }
+
+    public void setGroupRole(int groupRole) {
+        this.groupRole = groupRole;
     }
 
     private static UserFriendBean userFriendBeanObj = null;

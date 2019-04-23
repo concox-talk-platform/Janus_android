@@ -36,7 +36,10 @@ public class FloatWindowManager {
         wmParams = new WindowManager.LayoutParams();
         WindowManager windowManager = getWindowManager(context);
         mFloatLayout = new FloatLayout(context);
-        if (Build.VERSION.SDK_INT >= 24) { /*android7.0不能用TYPE_TOAST*/
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            wmParams.type = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
+        } else if (Build.VERSION.SDK_INT >= 24) { /*android7.0不能用TYPE_TOAST*/
             wmParams.type = WindowManager.LayoutParams.TYPE_PHONE;
         } else { /*以下代码块使得android6.0之后的用户不必再去手动开启悬浮窗权限*/
             String packname = context.getPackageName();
@@ -49,7 +52,7 @@ public class FloatWindowManager {
             }
         }
 
-        //设置图片格式，效果为背景透明
+            //设置图片格式，效果为背景透明
         wmParams.format = PixelFormat.RGBA_8888;
         //设置浮动窗口不可聚焦（实现操作除浮动窗口外的其他可见窗口的操作）
         wmParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;

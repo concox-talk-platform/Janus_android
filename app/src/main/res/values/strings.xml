@@ -46,7 +46,7 @@
     <!--newGroup-->
     <string name="new_group_str_create">创建群组</string>
     <string name="new_group_str_create_success">创建群组成功</string>
-
+    <string name="new_group_str_add_member_success">添加成员成功</string>
 
     <!--dialog-->
     <string name="dialog_commit">确定</string>
@@ -54,6 +54,7 @@
     <string name="dialog_message_change_group">确定切换到群组吗？</string>
     <string name="dialog_message_exit">确定退出该账户吗?</string>
     <string name="dialog_message_group_name">请输入群组名称</string>
+    <string name="dialog_message_group_add_member">确定将选中好友加入该群组吗?</string>
 
     <!--audioCall-->
     <string name="audio_call_hangup">挂断</string>
@@ -64,5 +65,9 @@
     <string name="audio_call_hangup_tip">已挂断</string>
     <string name="audio_call_cancel_tip">已取消</string>
     <string name="audio_call_no_accept_tip">对方无响应</string>
+
+    <!--groupMemberList-->
+    <string name="group_member_list_title_menu">添加成员</string>
+    <string name="group_member_delete_member_tips">确定删除该成员吗?</string>
 
 </resources>

@@ -31,7 +31,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".activity.AudioTalkActivity"
+            android:name=".activity.GroupMemberListActivity"
             android:label="@string/app_name">
 
         </activity>
@@ -43,7 +43,7 @@
         </activity>
 
         <activity
-            android:name=".activity.CreateGroupActivity"
+            android:name=".activity.GroupCreateActivity"
             android:label="@string/app_name">
 
         </activity>

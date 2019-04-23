@@ -1,8 +1,5 @@
 package com.example.janusandroidtalk;
 
-import android.content.Intent;
-import android.opengl.EGLContext;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -15,14 +12,12 @@ import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.widget.Toast;
 
-import com.example.janusandroidtalk.activity.CallActivity;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
-import com.example.janusandroidtalk.floatwindow.permission.FloatPermissionManager;
 import com.example.janusandroidtalk.fragment.FragmentGroup;
 import com.example.janusandroidtalk.fragment.FragmentMine;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
-import com.example.janusandroidtalk.webrtctest.AppRTCAudioManager;
+import com.example.janusandroidtalk.webrtc.AppRTCAudioManager;
 
 import org.json.JSONException;
 import org.json.JSONObject;

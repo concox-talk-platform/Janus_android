@@ -179,6 +179,21 @@ public class LoginActivity extends AppCompatActivity {
                 UserGroupBean userGroupBean = new UserGroupBean();
                 userGroupBean.setUserGroupName(groupRecord.getGroupName());
                 userGroupBean.setUserGroupId(groupRecord.getGid());
+                ArrayList<UserFriendBean> memberList = new ArrayList<>();
+                for (TalkCloudApp.UserRecord userRecord: groupRecord.getUsrListList()) {
+                    UserFriendBean  userFriendBean1 = new UserFriendBean();
+                    userFriendBean1.setUserFriendName(userRecord.getName());
+                    userFriendBean1.setUserFriendId(userRecord.getUid());
+                    userFriendBean1.setGroupRole(userRecord.getGrpRole());
+                    if(result.getUserInfo().getId() == userRecord.getUid() && userRecord.getGrpRole() == 2){
+                        userGroupBean.setUserGroupRole(2);
+                    }else{
+                        userGroupBean.setUserGroupRole(2);
+                    }
+                    userFriendBean1.setOnline(userRecord.getOnline());
+                    memberList.add(userFriendBean1);
+                }
+                userGroupBean.setUserFriendBeanArrayList(memberList);
                 userGroupBeanArrayList.add(userGroupBean);
             }
             userBean.setUserFriendBeanArrayList(userFriendBeanArrayList);
@@ -186,7 +201,7 @@ public class LoginActivity extends AppCompatActivity {
             UserBean.setUserBean(userBean);
 
             //判断是否存在默认进入的群组id，如果没有则默认第一个群组id
-            if(MyApplication.getDefaultGroupId() == 0 || userGroupBeanArrayList.size()>0){
+            if(MyApplication.getDefaultGroupId() == 0 && userGroupBeanArrayList.size()>0){
                 MyApplication.setDefaultGroupId(userGroupBeanArrayList.get(0).getUserGroupId());
             }
             MyApplication.setUserId(result.getUserInfo().getId());

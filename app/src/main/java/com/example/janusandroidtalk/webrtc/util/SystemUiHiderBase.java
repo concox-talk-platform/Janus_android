@@ -1,4 +1,4 @@
-package com.example.janusandroidtalk.webrtctest.util;
+package com.example.janusandroidtalk.webrtc.util;
 
 import android.app.Activity;
 import android.view.View;

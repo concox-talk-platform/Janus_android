@@ -2,6 +2,7 @@ package com.example.janusandroidtalk.activity;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -15,6 +16,7 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -29,6 +31,7 @@ import android.widget.Toast;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
+import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
@@ -48,11 +51,12 @@ import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
 import talk_cloud.TalkCloudGrpc;
 
-public class CreateGroupActivity extends AppCompatActivity implements MyControlCallBack {
+public class GroupCreateActivity extends AppCompatActivity implements MyControlCallBack {
 
     private EditText editSearch;
     private Dialog loading;
     private TextView menu;
+    private TextView title;
 
     private List<UserFriendBean> myList = new ArrayList<>();
     private ImageView toolbarBack = null;
@@ -63,6 +67,10 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
     private int sum = 0;
     private String userIds = "";
 
+    private int groupPosition = 0;//当前群组
+    private int addFlag = 0;//0为创建群组，1为添加成员，
+    private UserGroupBean userGroupBean;//当前群组对象，
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_create_group);
@@ -70,10 +78,28 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
         toolbarBack = (ImageView) findViewById(R.id.create_group_back);
         listView = (ListView) findViewById(R.id.create_group_list_view);
         menu = (TextView) findViewById(R.id.create_group_menu);
+        title = (TextView) findViewById(R.id.create_group_title);
+
+        groupPosition = getIntent().getIntExtra("groupPosition",0);
+        addFlag = getIntent().getIntExtra("addFlag",0);
 
         //赋值用户好友列表
-        if (UserBean.getUserBean() != null) {
+        if (UserBean.getUserBean() != null && addFlag == 0 ) {
+            //创建群组
             myList = UserBean.getUserBean().getUserFriendBeanArrayList();
+        }else if(UserBean.getUserBean() != null && addFlag == 1 ){
+            //获取当前群组的成员列表，并将已在群组的好友设置为已经选择
+            userGroupBean = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
+            myList = UserBean.getUserBean().getUserFriendBeanArrayList();
+            for (UserFriendBean userFriendBean: myList) {
+                for(UserFriendBean userFriendBeanMember: userGroupBean.getUserFriendBeanArrayList()){
+                    if(userFriendBean.getUserFriendId() == userFriendBeanMember.getUserFriendId()){
+                        userFriendBean.setInGroup(true);
+                    }
+                }
+            }
+            //获取当前群组名称，并设置为title
+            title.setText(R.string.group_member_list_title_menu);
         }
 
         loading = CustomProgressDialog.createLoadingDialog(this, R.string.recycler_pull_loading);
@@ -83,14 +109,14 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
         //隐藏悬浮窗
         FloatActionController.getInstance().hide();
 
-        //返回事件
+        //返回事件,清空本次选择的成员
         toolbarBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 for (UserFriendBean userFriendBean: myList) {
                     userFriendBean.setCheck(false);
                 }
-                CreateGroupActivity.this.finish();
+                GroupCreateActivity.this.finish();
             }
         });
 
@@ -105,31 +131,56 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
         menu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                final EditText editText = new EditText(CreateGroupActivity.this);
-                final AlertDialog dialog = new AlertDialog.Builder(CreateGroupActivity.this)
-                        .setTitle(R.string.dialog_message_group_name)
-                        .setView(editText)
-                        .setPositiveButton(R.string.dialog_commit, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                if(!TextUtils.isEmpty(editText.getText().toString())){
-                                    dialog.dismiss();
-                                    for (UserFriendBean userFriendBean: myList) {
-                                        if(userFriendBean.isCheck()){
-                                            userIds = userIds +","+userFriendBean.getUserFriendId();
-                                        }
-                                    }
-                                    new GrpcCreateGroupTask().execute(userIds,editText.getText().toString());
-                                }
-                            }
-                        })
-                        .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
-                            @Override
-                            public void onClick(DialogInterface dialog, int which) {
-                                dialog.dismiss();
-                            }
-                        }).create();
-                dialog.show();
+               if(addFlag == 0){
+                   final EditText editText = new EditText(GroupCreateActivity.this);
+                   final AlertDialog dialog = new AlertDialog.Builder(GroupCreateActivity.this)
+                           .setTitle(R.string.dialog_message_group_name)
+                           .setView(editText)
+                           .setPositiveButton(R.string.dialog_commit, new DialogInterface.OnClickListener() {
+                               @Override
+                               public void onClick(DialogInterface dialog, int which) {
+                                   if(!TextUtils.isEmpty(editText.getText().toString())){
+                                       dialog.dismiss();
+                                       for (UserFriendBean userFriendBean: myList) {
+                                           if(userFriendBean.isCheck()){
+                                               userIds = userIds +","+userFriendBean.getUserFriendId();
+                                           }
+                                       }
+                                       new GrpcCreateGroupTask().execute(userIds,editText.getText().toString());
+                                   }
+                               }
+                           })
+                           .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
+                               @Override
+                               public void onClick(DialogInterface dialog, int which) {
+                                   dialog.dismiss();
+                               }
+                           }).create();
+                   dialog.show();
+               }else{
+                   final AlertDialog dialog = new AlertDialog.Builder(GroupCreateActivity.this)
+                           .setMessage(R.string.dialog_message_group_add_member)
+                           .setPositiveButton(R.string.dialog_commit, new DialogInterface.OnClickListener() {
+                               @Override
+                               public void onClick(DialogInterface dialog, int which) {
+                                   dialog.dismiss();
+                                   for (UserFriendBean userFriendBean: myList) {
+                                       if(userFriendBean.isCheck()){
+                                           userIds = userIds +","+userFriendBean.getUserFriendId();
+                                       }
+                                   }
+                                   new GrpcGroupAddMebmberTask().execute(userIds);
+
+                               }
+                           })
+                           .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
+                               @Override
+                               public void onClick(DialogInterface dialog, int which) {
+                                   dialog.dismiss();
+                               }
+                           }).create();
+                   dialog.show();
+               }
             }
         });
 
@@ -176,12 +227,13 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
         public View getView(final int position, View convertView, ViewGroup parent) {
             ViewHolder holder = null;
             if (convertView == null) {
-                convertView = LayoutInflater.from(CreateGroupActivity.this).inflate(R.layout.activity_create_group_list_item, parent, false);
+                convertView = LayoutInflater.from(GroupCreateActivity.this).inflate(R.layout.activity_create_group_list_item, parent, false);
                 holder = new ViewHolder();
                 holder.imageView = (ImageView) convertView.findViewById(R.id.create_group_list_item_image);
                 holder.nameTextView = (TextView) convertView.findViewById(R.id.create_group_list_item_name);
                 holder.stateTextView = (TextView) convertView.findViewById(R.id.create_group_list_item_state);
                 holder.checkBox = (CheckBox) convertView.findViewById(R.id.create_group_list_item_checkbox);
+                holder.textViewInGroup = (TextView) convertView.findViewById(R.id.create_group_list_item_text);
                 convertView.setTag(holder);
             } else {
                 holder = (ViewHolder) convertView.getTag();
@@ -189,21 +241,31 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
 
             holder.nameTextView.setText(myList.get(position).getUserFriendName());
             holder.stateTextView.setText(myList.get(position).getUserFriendId() + "");
+            if(addFlag == 1 && myList.get(position).isInGroup()){
+                holder.checkBox.setVisibility(View.GONE);
+                holder.textViewInGroup.setVisibility(View.VISIBLE);
+                holder.textViewInGroup.setText(R.string.search_str_added_group);
+            }else{
+                holder.checkBox.setVisibility(View.VISIBLE);
+                holder.textViewInGroup.setVisibility(View.GONE);
+            }
+
             holder.checkBox.setOnCheckedChangeListener(null);
             holder.checkBox.setChecked(myList.get(position).isCheck());
             holder.checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+                    String sure =getResources().getString(R.string.toolbar_commit);
                     if (isChecked) {
                         myList.get(position).setCheck(true);
                         sum = sum + 1;
-                        menu.setText("确定(" + sum + ")");
+                        menu.setText(sure+"(" + sum + ")");
                     } else {
                         sum = sum - 1;
                         if (sum == 0) {
                             menu.setText(R.string.toolbar_commit);
                         } else {
-                            menu.setText("确定(" + sum + ")");
+                            menu.setText(sure+"(" + sum + ")");
                         }
                         myList.get(position).setCheck(false);
                     }
@@ -298,6 +360,7 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
             TextView nameTextView;
             TextView stateTextView;
             CheckBox checkBox;
+            TextView textViewInGroup;
         }
     }
 
@@ -343,21 +406,87 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
             loading.dismiss();
 
             if (result == null) {
-                Toast.makeText(CreateGroupActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+                Toast.makeText(GroupCreateActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
                 return;
             }
             //判断result code
             if (result.getRes().getCode() != 200) {
-                Toast.makeText(CreateGroupActivity.this, result.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(GroupCreateActivity.this, result.getRes().getMsg(), Toast.LENGTH_SHORT).show();
                 return;
             } else {
                 //创建成功
-                JanusControl.sendCreateGroup(CreateGroupActivity.this,(int)(result.getGroupInfo().getGid()));
-                CreateGroupActivity.this.finish();
+                JanusControl.sendCreateGroup(GroupCreateActivity.this,(int)(result.getGroupInfo().getGid()));
+                GroupCreateActivity.this.finish();
             }
 
         }
     }
+
+    //添加好友进群
+    class GrpcGroupAddMebmberTask extends AsyncTask<String, Void, TalkCloudApp.CreateGroupResp> {
+        private ManagedChannel channel;
+
+        private GrpcGroupAddMebmberTask() {
+            loading.show();
+        }
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+        }
+
+        @Override
+        protected TalkCloudApp.CreateGroupResp doInBackground(String... params) {
+            int accountId = 0;
+            if(UserBean.getUserBean() != null){
+                accountId = UserBean.getUserBean().getUserId();
+            }
+
+            TalkCloudApp.CreateGroupResp replay = null;
+            try {
+                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
+                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
+                TalkCloudApp.CreateGroupReq regReq = TalkCloudApp.CreateGroupReq.newBuilder().setDeviceIds(params[0]).setGroupName(params[1]).setAccountId(accountId).build();
+                replay = stub.createGroup(regReq);
+                return replay;
+            } catch (Exception e) {
+                return replay;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(TalkCloudApp.CreateGroupResp result) {
+            try {
+                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            loading.dismiss();
+
+            if (result == null) {
+                Toast.makeText(GroupCreateActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            //判断result code
+            if (result.getRes().getCode() != 200) {
+                Toast.makeText(GroupCreateActivity.this, result.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+                return;
+            } else {
+                //添加成功，
+                Toast.makeText(GroupCreateActivity.this, R.string.new_group_str_add_member_success, Toast.LENGTH_SHORT).show();
+
+                for (UserFriendBean userFriendBean: myList) {
+                    userFriendBean.setCheck(false);
+                    userFriendBean.setInGroup(false);
+                }
+                setResult(RESULT_OK);
+                GroupCreateActivity.this.finish();
+            }
+
+        }
+    }
+
+
 
     @Override
     public void janusServer(Boolean isOk) {
@@ -393,11 +522,11 @@ public class CreateGroupActivity extends AppCompatActivity implements MyControlC
         public void handleMessage(android.os.Message msg) {
             switch (msg.what) {
                 case 1:
-                    Toast.makeText(CreateGroupActivity.this, R.string.new_group_str_create_success, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(GroupCreateActivity.this, R.string.new_group_str_create_success, Toast.LENGTH_SHORT).show();
                     for (UserFriendBean userFriendBean: myList) {
                         userFriendBean.setCheck(false);
                     }
-                    CreateGroupActivity.this.finish();
+                    GroupCreateActivity.this.finish();
                     break;
             }
         };

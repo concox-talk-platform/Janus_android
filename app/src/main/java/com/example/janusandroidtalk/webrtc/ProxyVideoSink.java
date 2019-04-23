@@ -1,4 +1,4 @@
-package com.example.janusandroidtalk.activity;
+package com.example.janusandroidtalk.webrtc;
 
 import org.webrtc.Logging;
 import org.webrtc.VideoFrame;

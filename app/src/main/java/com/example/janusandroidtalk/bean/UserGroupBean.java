@@ -7,6 +7,7 @@ public class UserGroupBean implements Serializable {
     private String userGroupName;
     private int userGroupId;
     private ArrayList<UserFriendBean> userFriendBeanArrayList;
+    private int userGroupRole;//群主为2,其他参与者为1
 
     public String getUserGroupName() {
         return userGroupName;
@@ -22,6 +23,14 @@ public class UserGroupBean implements Serializable {
 
     public void setUserGroupId(int userGroupId) {
         this.userGroupId = userGroupId;
+    }
+
+    public int getUserGroupRole() {
+        return userGroupRole;
+    }
+
+    public void setUserGroupRole(int userGroupRole) {
+        this.userGroupRole = userGroupRole;
     }
 
     public ArrayList<UserFriendBean> getUserFriendBeanArrayList() {
