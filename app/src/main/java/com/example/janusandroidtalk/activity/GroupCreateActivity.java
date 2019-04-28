@@ -489,7 +489,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
 
 
     @Override
-    public void janusServer(Boolean isOk) {
+    public void janusServer(int code,String msg) {
 
     }
 

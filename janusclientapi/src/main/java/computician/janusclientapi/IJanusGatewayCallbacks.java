@@ -1,5 +1,6 @@
 package computician.janusclientapi;
 
+import org.json.JSONObject;
 import org.webrtc.PeerConnection;
 
 import java.util.List;
@@ -9,6 +10,14 @@ import java.util.List;
  */
 public interface IJanusGatewayCallbacks extends IJanusCallbacks {
     public void onSuccess();
+
+    public void onUserCallSuccess(JSONObject object);
+
+    public void onSlowLink(JSONObject object);
+
+    public void onTimeOut(JSONObject object);
+
+    public void onDetached();
 
     public void onDestroy();
 

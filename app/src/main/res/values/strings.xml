@@ -55,6 +55,8 @@
     <string name="dialog_message_exit">确定退出该账户吗?</string>
     <string name="dialog_message_group_name">请输入群组名称</string>
     <string name="dialog_message_group_add_member">确定将选中好友加入该群组吗?</string>
+    <string name="dialog_message_quit_group_room_for_video">确定退出群组，进行视频呼叫吗?</string>
+    <string name="dialog_message_quit_group_room_for_audio">确定退出群组，进行音频呼叫吗?</string>
 
     <!--audioCall-->
     <string name="audio_call_hangup">挂断</string>

@@ -9,6 +9,8 @@ class JanusTransactionCallbackFactory {
         switch (type) {
             case create:
                 return new JanusCreateSessionTransaction(server);
+            case user_call:
+                return new JanusUserCallTransaction(server);
             default:
                 return null;
         }

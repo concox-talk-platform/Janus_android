@@ -18,7 +18,7 @@ import android.os.AsyncTask;
 /**
  * Created by ben.trent on 5/7/2015.
  */
-public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessionCreationCallbacks, IJanusAttachPluginCallbacks {
+public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessionCreationCallbacks, IJanusAttachPluginCallbacks ,IJanusUserCallCallbacks{
 
     private class RandomString {
         final String str = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -49,6 +49,8 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
     private volatile Thread keep_alive;
     private Boolean peerConnectionFactoryInitialized = false;
 
+    private int uid;
+
     private class AsyncAttach extends AsyncTask<IJanusPluginCallbacks, Void ,Void>{
         protected Void doInBackground(IJanusPluginCallbacks... cbs){
             IJanusPluginCallbacks cb = cbs[0];
@@ -69,7 +71,7 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
         };
     }
 
-    public JanusServer(IJanusGatewayCallbacks gatewayCallbacks) {
+    public JanusServer(IJanusGatewayCallbacks gatewayCallbacks,int myuid) {
         gatewayObserver = gatewayCallbacks;
         java.lang.System.setProperty("java.net.preferIPv6Addresses", "false");
         java.lang.System.setProperty("java.net.preferIPv4Stack", "true");
@@ -80,6 +82,7 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
         connected = false;
         sessionId = new BigInteger("-1");
         serverConnection = JanusMessagerFactory.createMessager(serverUri, this);
+        this.uid = myuid;
     }
 
     private String putNewTransaction(ITransactionCallbacks transactionCallbacks) {
@@ -99,6 +102,7 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
             ITransactionCallbacks cb = JanusTransactionCallbackFactory.createNewTransactionCallback(this, TransactionType.create);
             String transaction = putNewTransaction(cb);
             obj.put("transaction", transaction);
+            obj.put("uid",uid);
             serverConnection.sendMessage(obj.toString());
         } catch (JSONException ex) {
             onCallbackError(ex.getMessage());
@@ -252,6 +256,27 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
             callbacks.onCallbackError(ex.getMessage());
         }
     }
+    public void sendMessage(int myId,String myName,int RemoteId,int type,boolean isVideo,int isAccept) {
+        try {
+            JSONObject msg = new JSONObject();
+            msg.put("janus", "user_call");
+            if (serverConnection.getMessengerType() == JanusMessengerType.websocket) {
+                msg.put("session_id", sessionId);
+            }
+            ITransactionCallbacks cb = JanusTransactionCallbackFactory.createNewTransactionCallback(this, TransactionType.user_call);
+            String transaction = putNewTransaction(cb);
+            msg.put("transaction", transaction);
+            msg.put("myId", myId);
+            msg.put("name", myName);
+            msg.put("uid", RemoteId);//对方Id
+            msg.put("type", type);//主叫方:0第一次呼叫，2取消     被叫方：1
+            msg.put("isVideo", isVideo);//
+            msg.put("isAccept", isAccept);//主叫方：0发起，3取消  。被叫方：1拒绝，2接受
+            serverConnection.sendMessage(msg.toString());
+        } catch (JSONException ex) {
+
+        }
+    }
 
     //region MessageObserver
     @Override
@@ -310,17 +335,50 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
                     break;
                 }
                 case detached: {
-                    if (handle != null) {
-                        handle.onDetached();
-                        handle.detach();
+                    if (gatewayObserver != null) {
+                        gatewayObserver.onDetached();
                     }
+                    break;
+                }
+                case user_called: {
+                    if (transaction != null) {
+                        ITransactionCallbacks cb = null;
+                        synchronized (transactionsLock) {
+                            cb = transactions.get(transaction);
+                            if (cb != null)
+                                transactions.remove(transaction);
+                        }
+                        if (cb != null) {
+                            cb.reportSuccess(obj);
+                            transactions.remove(transaction);
+                        }
+                    }
+                    break;
+                }
+                case user_call: {
+                    if (gatewayObserver != null) {
+                        gatewayObserver.onUserCallSuccess(obj);
+                    }
+                    break;
+                }
+                case timeout: {
+                    if (gatewayObserver != null) {
+                        gatewayObserver.onTimeOut(obj);
+                    }
+                    break;
+                }
+                case slowlink: {
+//                    if (gatewayObserver != null) {
+//                        gatewayObserver.onSlowLink(obj);
+//                    }
                     break;
                 }
                 case event: {
                     if (handle != null) {
                         JSONObject plugin_data = null;
-                        if (obj.has("plugindata"))
+                        if (obj.has("plugindata")) {
                             plugin_data = obj.getJSONObject("plugindata");
+                        }
                         if (plugin_data != null) {
                             JSONObject data = null;
                             JSONObject jsep = null;
@@ -331,6 +389,7 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
                             handle.onMessage(data, jsep);
                         }
                     }
+                    break;
                 }
             }
         } catch (JSONException ex) {
@@ -385,6 +444,20 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
             pluginCallbacks.success(pluginHandle);
         } catch (JSONException ex) {
             //or do we want to use the pluginCallbacks.error(ex.getMessage());
+            gatewayObserver.onCallbackError(ex.getMessage());
+        }
+    }
+
+    // user_call
+    @Override
+    public void onUserCallSuccess(JSONObject obj) {
+        try{
+            if(obj.getInt("code") != 0 ){
+                gatewayObserver.onCallbackError(obj.getString("msg"));
+            }else{
+                gatewayObserver.onUserCallSuccess(obj);
+            }
+        }catch (JSONException ex) {
             gatewayObserver.onCallbackError(ex.getMessage());
         }
     }

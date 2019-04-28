@@ -6,6 +6,8 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -32,7 +34,11 @@ import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
 import com.example.janusandroidtalk.pullrecyclerview.layoutmanager.XLinearLayoutManager;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
+import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
 import com.example.janusandroidtalk.tools.AppTools;
+
+import org.json.JSONObject;
+import org.webrtc.MediaStream;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,7 +49,7 @@ import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
 import talk_cloud.TalkCloudGrpc;
 
-public class FragmentMine extends Fragment{
+public class FragmentMine extends Fragment implements MyControlCallBack {
 
     private PullRecyclerView mPullRecyclerView;
     private List<UserFriendBean> myList = new ArrayList<>();
@@ -51,6 +57,11 @@ public class FragmentMine extends Fragment{
 
     private LinearLayout searchView;
     private TextView imageView;
+
+    private String name;
+    private int remoteId;
+    private boolean isVideo;
+
 
     public FragmentMine() {
 
@@ -149,6 +160,7 @@ public class FragmentMine extends Fragment{
 
     }
 
+
     class MineListAdapter extends BaseRecyclerAdapter {
         private Context context;
         public MineListAdapter(Context context, int layoutResId, List<UserFriendBean> data) {
@@ -160,17 +172,61 @@ public class FragmentMine extends Fragment{
             final UserFriendBean data = myList.get(position);
             holder.setText(R.id.fragment_mine_list_item_name,data.getUserFriendName());
             holder.setText(R.id.fragment_mine_list_item_state,data.getUserFriendId()+"");
-            ImageView imageView = holder.getView(R.id.fragment_mine_list_item_audio_call);
-            imageView.setOnClickListener(new View.OnClickListener() {
+            ImageView imageViewVideo = holder.getView(R.id.fragment_mine_list_item_video_call);
+            ImageView imageViewAudio = holder.getView(R.id.fragment_mine_list_item_audio_call);
+            imageViewVideo.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-//                    Intent intent = new Intent(context, CallActivity.class);
-//                    intent.putExtra("isCall",true);
-//                    intent.putExtra("name",data.getUserFriendName());
-//                    context.startActivity(intent);
+                    final AlertDialog dialog = new AlertDialog.Builder(getActivity())
+                            .setMessage(R.string.dialog_message_quit_group_room_for_video)
+                            .setPositiveButton(R.string.dialog_commit, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                    //发送关闭pocRoom插件，关闭webrtc连接
+                                    //JanusControl.janusControlDetach(FragmentMine.this,false);
+                                    JanusControl.janusControlPocRoomDetach(FragmentMine.this);
+                                    name = data.getUserFriendName();
+                                    remoteId = data.getUserFriendId();
+                                    isVideo = true;
+                                }
+                            })
+                            .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            }).create();
+                    dialog.show();
                 }
             });
 
+            imageViewAudio.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    final AlertDialog dialog = new AlertDialog.Builder(getActivity())
+                            .setMessage(R.string.dialog_message_quit_group_room_for_audio)
+                            .setPositiveButton(R.string.dialog_commit, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                    //发送关闭pocRoom插件，关闭webrtc连接
+                                    //JanusControl.janusControlDetach(FragmentMine.this,false);
+                                    JanusControl.janusControlPocRoomDetach(FragmentMine.this);
+                                    name = data.getUserFriendName();
+                                    remoteId = data.getUserFriendId();
+                                    isVideo = false;
+                                }
+                            })
+                            .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
+                                @Override
+                                public void onClick(DialogInterface dialog, int which) {
+                                    dialog.dismiss();
+                                }
+                            }).create();
+                    dialog.show();
+                }
+            });
         }
     }
 
@@ -236,5 +292,48 @@ public class FragmentMine extends Fragment{
         }
     }
 
+
+
+    @Override
+    public void janusServer(int code, String msg) {
+        switch (code){
+            case 104:
+                // pocroom onDetached
+                Message message = new Message();
+                message.what = 0;
+                handler.sendMessage(message);
+                break;
+        }
+    }
+
+    private Handler handler = new Handler() {
+        public void handleMessage(android.os.Message msg) {
+            switch (msg.what) {
+                case 0:
+                    Intent intent = new Intent(getActivity(), CallActivity.class);
+                    intent.putExtra("isCall",true);
+                    intent.putExtra("isVideo",isVideo);
+                    intent.putExtra("name",name);
+                    intent.putExtra("remoteId",remoteId);
+                    getActivity().startActivity(intent);
+                    break;
+            }
+        }
+    };
+
+    @Override
+    public void showMessage(JSONObject msg, JSONObject jsepLocal) {
+
+    }
+
+    @Override
+    public void onSetLocalStream(MediaStream stream) {
+
+    }
+
+    @Override
+    public void onAddRemoteStream(MediaStream stream) {
+
+    }
 
 }

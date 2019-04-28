@@ -57,16 +57,16 @@ public class FloatLayout extends FrameLayout implements MyControlCallBack {
         int action = event.getAction();
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-//                mTouchStartX = event.getX();
-//                mTouchStartY = event.getY();
+                mTouchStartX = event.getX();
+                mTouchStartY = event.getY();
                 mFloatView.setImageResource(R.mipmap.audio_gray);
                 JanusControl.sendTalk(FloatLayout.this);
                 break;
             case MotionEvent.ACTION_MOVE:
                 // 更新浮动窗口位置参数
-//                mWmParams.x = (int) (x - mTouchStartX);
-//                mWmParams.y = (int) (y - mTouchStartY);
-//                mWindowManager.updateViewLayout(this, mWmParams);
+                mWmParams.x = (int) (x - mTouchStartX);
+                mWmParams.y = (int) (y - mTouchStartY);
+                mWindowManager.updateViewLayout(this, mWmParams);
                 break;
             case MotionEvent.ACTION_UP:
                 JanusControl.sendConfigure(FloatLayout.this,true);
@@ -88,7 +88,7 @@ public class FloatLayout extends FrameLayout implements MyControlCallBack {
 
 
     @Override
-    public void janusServer(Boolean isOk) {
+    public void janusServer(int code,String msg) {
 
     }
 

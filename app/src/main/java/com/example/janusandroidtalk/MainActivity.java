@@ -161,16 +161,18 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
     }
 
     @Override
-    public void janusServer(Boolean isOk) {
-        if(isOk){
-            //JanusControl.sendAttachVideoCalllugin(MainActivity.this);
-            Message message = new Message();
-            message.what = 0;
-            handler.sendMessage(message);
-        }else{
-            Message message1 = new Message();
-            message1.what = 1;
-            handler.sendMessage(message1);
+    public void janusServer(int code,String msg) {
+        switch (code){
+            case 0:
+//                Message message = new Message();
+//                message.what = 0;
+//                handler.sendMessage(message);
+                break;
+            case 100:
+//                Message message1 = new Message();
+//                message1.what = 1;
+//                handler.sendMessage(message1);
+                break;
         }
     }
 

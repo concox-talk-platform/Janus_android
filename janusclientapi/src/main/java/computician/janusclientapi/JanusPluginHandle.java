@@ -28,7 +28,7 @@ public class JanusPluginHandle {
     private  MediaStream myStream = null;
     private  MediaStream remoteStream = null;
     private  SessionDescription mySdp = null;
-    private  PeerConnection pc = null;
+    private  static PeerConnection pc = null;
     private DataChannel dataChannel = null;
     private  boolean trickle = true;
     private  boolean iceDone = false;
@@ -38,11 +38,11 @@ public class JanusPluginHandle {
     private  String AUDIO_TRACK_ID = "1928882";
     private  String LOCAL_MEDIA_ID = "1198181";
 
-    private VideoSource videoSource;
-    private AudioSource audioSource;
+    private static VideoSource videoSource;
+    private static AudioSource audioSource;
 
     private  final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private  PeerConnectionFactory sessionFactory = null;
+    private  static PeerConnectionFactory sessionFactory = null;
     private  JanusServer server;
     public  JanusSupportedPluginPackages plugin;
     public  BigInteger id;
@@ -173,8 +173,11 @@ public class JanusPluginHandle {
         });
     }
 
-    public void JanusSetRemoteDescription(IPluginHandleWebRTCCallbacks callbacks){
+    public void JanusSetRemoteDescription(IPluginHandleWebRTCCallbacks callbacks,boolean isUpdateMySdp){
         try {
+            if(isUpdateMySdp){
+                mySdp = null;
+            }
             JSONObject obj = callbacks.getJsep();
             String sdp = obj.getString("sdp");
             SessionDescription.Type type = SessionDescription.Type.fromCanonicalForm(obj.getString("type"));
@@ -272,54 +275,58 @@ public class JanusPluginHandle {
     }
 
     public void hangUp() {
-       executor.execute(()->{
-           if (pc != null && pc.signalingState() != PeerConnection.SignalingState.CLOSED){
-               pc.close();
-               pc = null;
-           }
+       if (pc != null && pc.signalingState() != PeerConnection.SignalingState.CLOSED){
+           pc.close();
+           pc = null;
+       }
 
-           if (audioSource != null) {
-               audioSource.dispose();
-               audioSource = null;
-           }
+       if (audioSource != null) {
+           audioSource.dispose();
+           audioSource = null;
+       }
 
-           if (videoSource != null) {
-               videoSource.dispose();
-               videoSource = null;
-           }
+       if (videoSource != null) {
+           videoSource.dispose();
+           videoSource = null;
+       }
 
-           if (_captureAndroid != null) {
-               try {
-                   _captureAndroid.stopCapture();
-               } catch (InterruptedException e) {
-                   e.printStackTrace();
-               }
-               _captureAndroid.dispose();
-               _captureAndroid = null;
+       if (_captureAndroid != null) {
+           try {
+               _captureAndroid.stopCapture();
+           } catch (InterruptedException e) {
+               e.printStackTrace();
            }
+           _captureAndroid.dispose();
+           _captureAndroid = null;
+       }
 
-           if (_surfaceTextureHelper != null) {
-               _surfaceTextureHelper.dispose();
-               _surfaceTextureHelper = null;
-           }
+       if (_surfaceTextureHelper != null) {
+           _surfaceTextureHelper.dispose();
+           _surfaceTextureHelper = null;
+       }
 
-           if (sessionFactory != null) {
-               sessionFactory.dispose();
-               sessionFactory = null;
-           }
+       if (sessionFactory != null) {
+           sessionFactory.dispose();
+           sessionFactory = null;
+       }
 
-           mySdp = null;
-           if (dataChannel != null)
-               dataChannel.close();
-           dataChannel = null;
-           trickle = true;
-           iceDone = false;
-           sdpSent = false;
-       });
+       mySdp = null;
+       if (dataChannel != null)
+           dataChannel.close();
+       dataChannel = null;
+       trickle = true;
+       iceDone = false;
+       sdpSent = false;
+
     }
 
     public void detach() {
         hangUp();
+        JSONObject obj = new JSONObject();
+        server.sendMessage(obj, JanusMessageType.detach, id);
+    }
+
+    public void pocroomdetach() {
         JSONObject obj = new JSONObject();
         server.sendMessage(obj, JanusMessageType.detach, id);
     }
@@ -361,8 +368,7 @@ public class JanusPluginHandle {
         if (mLineIndex == -1) {
             return sdpDescription;
         }
-        // A list with all the payload types with name |codec|. The payload types are integers in the
-        // range 96-127, but they are stored as strings here.
+
         final List<String> codecPayloadTypes = new ArrayList<>();
         // a=rtpmap:<payload type> <encoding name>/<clock rate> [/<encoding parameters>]
         final Pattern codecPattern = Pattern.compile("^a=rtpmap:(\\d+) " + codec + "(/\\d+)+[\r]?$");

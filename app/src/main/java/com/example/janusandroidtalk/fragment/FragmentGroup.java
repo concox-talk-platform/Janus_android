@@ -293,10 +293,11 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
     }
 
     @Override
-    public void janusServer(Boolean isOk) {
-        if(isOk){
-            JanusControl.sendAttachPocRoomPlugin(this);
-        }else{
+    public void janusServer(int code,String msg) {
+       switch (code){
+           case 101:
+               JanusControl.sendAttachPocRoomPlugin(this,false);
+           break;
 
         }
     }
@@ -311,7 +312,9 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                     JanusControl.sendPocRoomJoinRoom(FragmentGroup.this,MyApplication.getDefaultGroupId());
                 }
             }else if(msg.getString("pocroom").equals("joined")){//加入房间成功，开始创建offer,进行webRtc链接
-                JanusControl.sendPocRoomCreateOffer(FragmentGroup.this);
+                if(msg.has("id") && msg.getInt("id") == MyApplication.getUserId() ){
+                    JanusControl.sendPocRoomCreateOffer(FragmentGroup.this);
+                }
             }else if(msg.getString("pocroom").equals("event")){//"configure" 信令成功
 
             }else if(msg.getString("pocroom").equals("webRtcisok")){//webRtc链接成功
