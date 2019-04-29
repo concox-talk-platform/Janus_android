@@ -139,6 +139,8 @@ public class JanusPluginHandle {
                 _captureAndroid.initialize(_surfaceTextureHelper, _context, videoSource.getCapturerObserver());
                 _captureAndroid.startCapture(VIDEO_RESOLUTION_WIDTH, VIDEO_RESOLUTION_HEIGHT, FPS);
                 videoTrack = sessionFactory.createVideoTrack(VIDEO_TRACK_ID, videoSource);
+            }else{
+                _rootEglBase = null;
             }
             if (audioTrack != null || videoTrack != null) {
                 stream = sessionFactory.createLocalMediaStream(LOCAL_MEDIA_ID);
@@ -275,11 +277,6 @@ public class JanusPluginHandle {
     }
 
     public void hangUp() {
-       if (pc != null && pc.signalingState() != PeerConnection.SignalingState.CLOSED){
-           pc.close();
-           pc = null;
-       }
-
        if (audioSource != null) {
            audioSource.dispose();
            audioSource = null;
@@ -305,6 +302,11 @@ public class JanusPluginHandle {
            _surfaceTextureHelper = null;
        }
 
+        if (pc != null && pc.signalingState() != PeerConnection.SignalingState.CLOSED){
+            pc.close();
+            pc = null;
+        }
+
        if (sessionFactory != null) {
            sessionFactory.dispose();
            sessionFactory = null;
@@ -326,7 +328,7 @@ public class JanusPluginHandle {
         server.sendMessage(obj, JanusMessageType.detach, id);
     }
 
-    public void pocroomdetach() {
+    public void janusDetach() {
         JSONObject obj = new JSONObject();
         server.sendMessage(obj, JanusMessageType.detach, id);
     }
@@ -544,16 +546,22 @@ public class JanusPluginHandle {
             Log.d("JANUSCLIENT", "Ice Connection change " + state.toString());
             switch (state) {
                 case DISCONNECTED:
+                    Log.e("janusServer","-----------webRTC disconnected------------");
                     break;
                 case CONNECTED:
+                    Log.e("janusServer","-----------webRTC connected------------");
                     break;
                 case NEW:
+                    Log.e("janusServer","-----------webRTC new------------");
                     break;
                 case CHECKING:
+                    Log.e("janusServer","-----------webRTC checking------------");
                     break;
                 case CLOSED:
+                    Log.e("janusServer","-----------webRTC closed------------");
                     break;
                 case FAILED:
+                    Log.e("janusServer","-----------webRTC failed------------");
                     break;
                 default:
                     break;

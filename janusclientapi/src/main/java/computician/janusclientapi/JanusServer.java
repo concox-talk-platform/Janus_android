@@ -14,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import android.opengl.EGLContext;
 import android.os.AsyncTask;
+import android.util.Log;
 
 /**
  * Created by ben.trent on 5/7/2015.
@@ -282,6 +283,7 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
     @Override
     public void receivedNewMessage(JSONObject obj) {
         try {
+
             JanusMessageType type = JanusMessageType.fromString(obj.getString("janus"));
             String transaction = null;
             BigInteger sender = null;
@@ -296,6 +298,12 @@ public class JanusServer implements Runnable, IJanusMessageObserver, IJanusSessi
                     handle = attachedPlugins.get(sender);
                 }
             }
+
+            if(!type.equals(JanusMessageType.ack)){
+                Log.e("janusServer","-----------------------");
+                Log.e("janusServer",obj.toString());
+            }
+
             switch (type) {
                 case keepalive:
                     break;

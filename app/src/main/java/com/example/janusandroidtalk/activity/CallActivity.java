@@ -61,9 +61,9 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
     private MediaPlayer mMediaPlayer;
     private CountDownTimer countDownTimer;
 
-    private boolean hangupOrcancel = false;
-
-    private boolean connectionIsOk = false;
+    private boolean hangupOrcancel = false;//for usercalled
+    private boolean connectionIsOk = false;//通话连接建立成功
+    private boolean isMyHangup = false;//通话连接建立成功之后，主动挂断
 
     protected void onCreate(Bundle savedInstanceState) {
         java.lang.System.setProperty("java.net.preferIPv6Addresses", "false");
@@ -181,6 +181,7 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
             @Override
             public void onClick(View v) {
                 if(connectionIsOk){
+                    isMyHangup = true;
                     Toast.makeText(CallActivity.this,R.string.audio_call_hangup_tip,Toast.LENGTH_SHORT).show();
                     reJoinRoom();
                 }else {
@@ -242,12 +243,12 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
                     handler.sendMessage(message103);
                 }else if(msg.equals("2")){
                     //对方接受，使用vc插件，注册，发起vc。
-                    JanusControl.sendAttachVideoCallplugin(CallActivity.this);
+                    JanusControl.sendAttachVideoCallPlugin(CallActivity.this);
                 }
                 break;
             case 104:
                 //pocroom onDetached 被呼叫方
-                JanusControl.sendAttachVideoCallplugin(CallActivity.this);
+                JanusControl.sendAttachVideoCallPlugin(CallActivity.this);
                 break;
             case 100:
                 // 失败
@@ -273,7 +274,7 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
                     if(msg.has("id") && msg.getInt("id") == MyApplication.getUserId() ){
                         JanusControl.sendPocRoomCreateOffer(CallActivity.this);
                     }
-                }else if(msg.getString("pocroom").equals("webRtcisok")){
+                }else if(msg.getString("pocroom").equals("configured")){
                     Message message4 = new Message();
                     message4.what = 4;
                     handler.sendMessage(message4);
@@ -299,6 +300,7 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
                                 JanusControl.janusControlCreatePeerConnectionFactory(CallActivity.this);//创建音频
                                 JanusControl.sendVideoCallCreateOffer(CallActivity.this,name,isVideo);
                             }
+                            //JanusControl.sendPocRoomVideoCallCreateOffer(CallActivity.this,name,isVideo,rootEglBase,CallActivity.this);
                         }else{//被呼叫方注册成功，发送userCall，accept=2给主叫方
                             if(isVideo) {
                                 JanusControl.sendUserCall(CallActivity.this, remoteId, 1, true, 2);
@@ -318,6 +320,7 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
                             JanusControl.janusControlCreatePeerConnectionFactory(CallActivity.this);//创建音频
                             JanusControl.sendVideoCallCreateAnswer(CallActivity.this,jsepLocal,isVideo);
                         }
+                        //JanusControl.sendPocRoomVideoCallCreateAnswer(CallActivity.this,jsepLocal,isVideo,rootEglBase,CallActivity.this);
                     }else if(msg.getJSONObject("result").getString("event").equals("accepted")){
                         Message message2 = new Message();
                         message2.what = 2;
@@ -327,12 +330,14 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
                     }else if(msg.getJSONObject("result").getString("event").equals("update")){
 
                     }else if(msg.getJSONObject("result").getString("event").equals("hangup")){
-//                        Message message3 = new Message();
-//                        message3.what = 3;
-//                        Bundle bundle = new Bundle();
-//                        bundle.putString("name",msg.getJSONObject("result").getString("username"));
-//                        message3.setData(bundle);//mes利用Bundle传递数据
-//                        handler.sendMessage(message3);
+                        if(!isMyHangup && msg.getJSONObject("result").getString("username").equals(name)){
+                            Message message3 = new Message();
+                            message3.what = 3;
+                            Bundle bundle = new Bundle();
+                            bundle.putString("name",msg.getJSONObject("result").getString("username"));
+                            message3.setData(bundle);//mes利用Bundle传递数据
+                            handler.sendMessage(message3);
+                        }
                     }
                 }else if(msg.getString("videocall").equals("webRtcisok")){//webRtc链接成功
 
@@ -361,6 +366,7 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
         public void handleMessage(android.os.Message msg) {
             switch (msg.what) {
                 case 0:
+                    countDownTimer.cancel();
                     Toast.makeText(CallActivity.this,msg.getData().getString("error"),Toast.LENGTH_SHORT).show();
                     reJoinRoom();
                     break;
@@ -384,6 +390,7 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
                     break;
                 case 3:
                     //hangup 挂断
+                    countDownTimer.cancel();
                     if(msg.getData().getString("name").equals(name) && isShowTips){
                         if(!connectionIsOk && mMediaPlayer.isPlaying()){
                             mMediaPlayer.stop();
@@ -393,23 +400,32 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
                     }
                     break;
                 case 4:
+                    countDownTimer.cancel();
                     if(mMediaPlayer.isPlaying()){
                         mMediaPlayer.stop();
                     }
                     disConnect();
                     break;
                 case 5:
+                    countDownTimer.cancel();
                     close();
                     break;
                 case 100:
+                    countDownTimer.cancel();
                     Toast.makeText(CallActivity.this,msg.getData().getString("error"),Toast.LENGTH_SHORT).show();
                     reJoinRoom();
                     break;
                 case 102:
+                    countDownTimer.cancel();
                     Toast.makeText(CallActivity.this,R.string.audio_call_hangup_tip,Toast.LENGTH_SHORT).show();
-                    reJoinRoom();
+                    if(isCall){
+                        reJoinRoom();
+                    }else{
+                        disConnect();
+                    }
                     break;
                 case 103:
+                    countDownTimer.cancel();
                     Toast.makeText(CallActivity.this,R.string.audio_call_hangup_remote_tip,Toast.LENGTH_SHORT).show();
                     reJoinRoom();
                     break;
@@ -429,7 +445,7 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
 
     @Override
     protected void onDestroy() {
-        disConnect();
+        close();
         super.onDestroy();
     }
 
@@ -437,12 +453,14 @@ public class CallActivity extends AppCompatActivity implements MyControlCallBack
         if(isCall){
             if(connectionIsOk){
                 JanusControl.janusControlDetach(this,true);
+               // JanusControl.janusControlPocRoomDetach(this);
             }else{
                 JanusControl.sendAttachPocRoomPlugin(CallActivity.this,true);
             }
         }else{
             if(connectionIsOk){
                 JanusControl.janusControlDetach(this,true);
+                //JanusControl.janusControlPocRoomDetach(this);
             }
         }
     }

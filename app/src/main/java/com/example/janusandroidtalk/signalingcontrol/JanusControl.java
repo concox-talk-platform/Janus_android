@@ -101,7 +101,11 @@ public class JanusControl {
                         //controlCallBack.janusServer(103,object.getInt("isAccept")+"");
                     }
                 }else if(object.getString("janus").equals("user_called")){
-                    controlCallBack.janusServer(102,"");
+                    if(object.getInt("code") == 0){
+                        controlCallBack.janusServer(102,"");
+                    }else{
+                        controlCallBack.janusServer(100,object.getString("msg"));
+                    }
                 }
             }catch (Exception  e){
                 controlCallBack.janusServer(100,e.toString());
@@ -177,7 +181,7 @@ public class JanusControl {
     }
 
     //使用VideoCall插件
-    public static void sendAttachVideoCallplugin(final MyControlCallBack myControlCallBack) {
+    public static void sendAttachVideoCallPlugin(final MyControlCallBack myControlCallBack) {
         controlCallBack = myControlCallBack;
         if(janusServer != null) {
             janusServer.Attach(new JanusVideoCallPluginCallbacks());
@@ -209,7 +213,8 @@ public class JanusControl {
         isVideoCallToPocRoom = false;
         controlCallBack = myControlCallBack;
         if(handle != null) {
-            handle.pocroomdetach();
+            //handle.detach();
+            handle.janusDetach();
         }
     }
 
