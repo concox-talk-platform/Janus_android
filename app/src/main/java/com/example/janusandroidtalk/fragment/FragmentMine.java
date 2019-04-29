@@ -4,7 +4,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -35,19 +34,19 @@ import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
 import com.example.janusandroidtalk.pullrecyclerview.layoutmanager.XLinearLayoutManager;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
-import com.example.janusandroidtalk.tools.AppTools;
 
 import org.json.JSONObject;
 import org.webrtc.MediaStream;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
-import talk_cloud.TalkCloudGrpc;
+
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
 
 public class FragmentMine extends Fragment implements MyControlCallBack {
 
@@ -101,7 +100,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
         //第一次进来发起请求
         if (UserBean.getUserBean() != null) {
             mPullRecyclerView.postRefreshing();
-            new GrpcGetFriendListTask().execute(UserBean.getUserBean().getUserId() + "");
+            buildFriendsInfo();
         }
         //下拉刷新
         mPullRecyclerView.setOnRecyclerRefreshListener(new PullRecyclerView.OnRecyclerRefreshListener() {
@@ -109,7 +108,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
             public void onPullRefresh() {
                 // 下拉刷新事件被触发
                 if (UserBean.getUserBean() != null) {
-                    new GrpcGetFriendListTask().execute(UserBean.getUserBean().getUserId() + "");
+                    buildFriendsInfo();
                 }
             }
 
@@ -157,9 +156,51 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
                 dialog.show();
             }
         });
-
     }
 
+    //Initialize friends' info
+    public void buildFriendsInfo() {
+        TalkCloudApp.FriendsReq friendsReq = TalkCloudApp.FriendsReq.newBuilder().setUid(UserBean.getUserBean().getUserId()).build();
+        TalkCloudApp.FriendsRsp friendsRsp = null;
+        try {
+            Future<TalkCloudApp.FriendsRsp> future = executor.submit(new Callable<TalkCloudApp.FriendsRsp>() {
+                @Override
+                public TalkCloudApp.FriendsRsp call() {
+                    return getGrpcConnect().getBlockingStub().getFriendList(friendsReq);
+                }
+            });
+
+            friendsRsp = future.get();
+        } catch (Exception e) {
+            //TODO nothing here
+        }
+
+        mPullRecyclerView.stopRefresh();
+
+        if(friendsRsp == null){
+            Toast.makeText(getContext(), R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        //判断friendsRsp code
+        if(friendsRsp.getRes().getCode() != 200){
+            Toast.makeText(getContext(), friendsRsp.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        myList.clear();
+        ArrayList<UserFriendBean> userFriendBeanArrayList = new ArrayList<UserFriendBean>();
+        for (TalkCloudApp.FriendRecord friendRecord : friendsRsp.getFriendListList()) {
+            UserFriendBean userFriendBean = new UserFriendBean();
+            userFriendBean.setUserFriendId((int)friendRecord.getUid());
+            userFriendBean.setUserFriendName(friendRecord.getName());
+            userFriendBeanArrayList.add(userFriendBean);
+        }
+        myList.addAll(userFriendBeanArrayList);
+        mAdapter.notifyDataSetChanged();
+        if (UserBean.getUserBean() != null) {
+            UserBean.getUserBean().setUserFriendBeanArrayList(userFriendBeanArrayList);
+        }
+    }
 
     class MineListAdapter extends BaseRecyclerAdapter {
         private Context context;
@@ -229,70 +270,6 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
             });
         }
     }
-
-    class GrpcGetFriendListTask extends AsyncTask<String, Void, TalkCloudApp.FriendsRsp> {
-        private ManagedChannel channel;
-
-        private GrpcGetFriendListTask() {
-
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        @Override
-        protected TalkCloudApp.FriendsRsp doInBackground(String... params) {
-            int id = Integer.parseInt(params[0]);
-            TalkCloudApp.FriendsRsp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.FriendsReq regReq = TalkCloudApp.FriendsReq.newBuilder().setUid(id).build();
-                replay = stub.getFriendList(regReq);
-                return replay;
-            } catch (Exception e) {
-                return replay;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.FriendsRsp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            mPullRecyclerView.stopRefresh();
-            if(result == null){
-                Toast.makeText(getContext(),R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if(result.getRes().getCode() != 200){
-                Toast.makeText(getContext(),result.getRes().getMsg(),Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            myList.clear();
-            ArrayList<UserFriendBean> userFriendBeanArrayList = new ArrayList<UserFriendBean>();
-            for (TalkCloudApp.FriendRecord friendRecord : result.getFriendListList()) {
-                UserFriendBean userFriendBean = new UserFriendBean();
-                userFriendBean.setUserFriendId((int)friendRecord.getUid());
-                userFriendBean.setUserFriendName(friendRecord.getName());
-                userFriendBeanArrayList.add(userFriendBean);
-            }
-            myList.addAll(userFriendBeanArrayList);
-            mAdapter.notifyDataSetChanged();
-            if (UserBean.getUserBean() != null) {
-                UserBean.getUserBean().setUserFriendBeanArrayList(userFriendBeanArrayList);
-            }
-        }
-    }
-
-
 
     @Override
     public void janusServer(int code, String msg) {

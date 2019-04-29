@@ -21,16 +21,21 @@ import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
-import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.tools.AppTools;
 
 import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
+import java.util.concurrent.FutureTask;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
 import talk_cloud.TalkCloudGrpc;
+
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -100,185 +105,148 @@ public class LoginActivity extends AppCompatActivity {
                         Toast.makeText(getApplicationContext(), R.string.login_inconsistent_tips, Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    new GrpcRegisterTask().execute(editAccount.getText().toString(),editPassword.getText().toString());
+
+                    String account = editAccount.getText().toString();
+                    String password = editPassword.getText().toString();
+                    registerTask(account, password);
                 }else{
                     //login
                     if(TextUtils.isEmpty(editAccount.getText().toString()) || TextUtils.isEmpty(editPassword.getText().toString())){
                         Toast.makeText(getApplicationContext(), R.string.login_empty_tips, Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    new GrpcLoginTask().execute(editAccount.getText().toString(),editPassword.getText().toString());
+
+                    String account = editAccount.getText().toString();
+                    String password = editPassword.getText().toString();
+                    loginTask(account, password);
                 }
             }
         });
-
     }
 
-    class GrpcLoginTask extends AsyncTask<String, Void, TalkCloudApp.LoginRsp> {
-        private ManagedChannel channel;
-
-        private GrpcLoginTask() {
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            loading.show();
-        }
-
-        @Override
-        protected TalkCloudApp.LoginRsp doInBackground(String... params) {
-            String name = params[0];
-            String password = params[1];
-            TalkCloudApp.LoginRsp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.LoginReq loginReq = TalkCloudApp.LoginReq.newBuilder().setName(name).setPasswd(password).build();
-                replay = stub.login(loginReq);
-                return replay;
-            } catch (Exception e) {
-               return replay;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.LoginRsp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            loading.dismiss();
-            if(result == null){
-                Toast.makeText(LoginActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if(result.getRes().getCode() != 200){
-                Toast.makeText(LoginActivity.this,result.getRes().getMsg(),Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            //保存数据
-            ArrayList<UserFriendBean> userFriendBeanArrayList = new ArrayList<>();
-            ArrayList<UserGroupBean> userGroupBeanArrayList = new ArrayList<>();
-            UserBean userBean = new UserBean();
-            userBean.setiMei(result.getUserInfo().getIMei());
-            userBean.setNickName(result.getUserInfo().getNickName());
-            userBean.setUserName(result.getUserInfo().getUserName());
-            userBean.setUserId(result.getUserInfo().getId());
-            for (TalkCloudApp.FriendRecord friendRecord: result.getFriendListList()) {
-                UserFriendBean  userFriendBean = new UserFriendBean();
-                userFriendBean.setUserFriendName(friendRecord.getName());
-                userFriendBean.setUserFriendId(friendRecord.getUid());
-                userFriendBeanArrayList.add(userFriendBean);
-            }
-            for (TalkCloudApp.GroupInfo groupRecord: result.getGroupListList()) {
-                UserGroupBean userGroupBean = new UserGroupBean();
-                userGroupBean.setUserGroupName(groupRecord.getGroupName());
-                userGroupBean.setUserGroupId(groupRecord.getGid());
-                ArrayList<UserFriendBean> memberList = new ArrayList<>();
-                for (TalkCloudApp.UserRecord userRecord: groupRecord.getUsrListList()) {
-                    UserFriendBean  userFriendBean1 = new UserFriendBean();
-                    userFriendBean1.setUserFriendName(userRecord.getName());
-                    userFriendBean1.setUserFriendId(userRecord.getUid());
-                    userFriendBean1.setGroupRole(userRecord.getGrpRole());
-                    if(result.getUserInfo().getId() == userRecord.getUid() && userRecord.getGrpRole() == 2){
-                        userGroupBean.setUserGroupRole(2);
-                    }else{
-                        userGroupBean.setUserGroupRole(2);
-                    }
-                    userFriendBean1.setOnline(userRecord.getOnline());
-                    memberList.add(userFriendBean1);
+    public void registerTask(String account, String password) {
+        TalkCloudApp.AppRegReq appRegReq = TalkCloudApp.AppRegReq.newBuilder().setName(account).setPassword(password).build();
+        TalkCloudApp.AppRegRsp appRegRsp = null;
+        try {
+            Future<TalkCloudApp.AppRegRsp> future = executor.submit(new Callable<TalkCloudApp.AppRegRsp>() {
+                @Override
+                public TalkCloudApp.AppRegRsp call() {
+                    return getGrpcConnect().getBlockingStub().appRegister(appRegReq);
                 }
-                userGroupBean.setUserFriendBeanArrayList(memberList);
-                userGroupBeanArrayList.add(userGroupBean);
-            }
-            userBean.setUserFriendBeanArrayList(userFriendBeanArrayList);
-            userBean.setUserGroupBeanArrayList(userGroupBeanArrayList);
-            UserBean.setUserBean(userBean);
+            });
 
-            //判断是否存在默认进入的群组id，如果没有则默认第一个群组id
-            if(MyApplication.getDefaultGroupId() == 0 && userGroupBeanArrayList.size()>0){
-                MyApplication.setDefaultGroupId(userGroupBeanArrayList.get(0).getUserGroupId());
-            }
-            MyApplication.setUserId(result.getUserInfo().getId());
-            MyApplication.setUserName(result.getUserInfo().getUserName());
-            MyApplication.setPassword(editPassword.getText().toString());
-            MyApplication.setLoginState("login");
+            appRegRsp = future.get();
+        } catch (Exception e) {
 
-            Toast.makeText(LoginActivity.this,R.string.login_login_success_tips,Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-            startActivity(intent);
-            finish();
         }
+
+        loading.dismiss();
+        if(appRegRsp == null){
+            Toast.makeText(LoginActivity.this,R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        //判断appRegRsp code
+        if(appRegRsp.getRes().getCode() != 200){
+            Toast.makeText(LoginActivity.this, appRegRsp.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        //保存数据
+        UserBean userBean = new UserBean();
+        userBean.setUserName(appRegRsp.getUserName());
+        userBean.setUserId(appRegRsp.getId());
+        UserBean.setUserBean(userBean);
+
+        MyApplication.setUserId(appRegRsp.getId());
+        MyApplication.setUserName(appRegRsp.getUserName());
+        MyApplication.setPassword(editPassword.getText().toString());
+        MyApplication.setLoginState("login");
+
+        Toast.makeText(LoginActivity.this,R.string.login_register_success_tips,Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+        startActivity(intent);
+        finish();
     }
 
-    class GrpcRegisterTask extends AsyncTask<String, Void, TalkCloudApp.AppRegRsp> {
-        private ManagedChannel channel;
+    public void loginTask(String account, String password) {
+        TalkCloudApp.LoginReq loginReq = TalkCloudApp.LoginReq.newBuilder().setName(account).setPasswd(password).build();
+        TalkCloudApp.LoginRsp loginRsp = null;
+        try {
+            Future<TalkCloudApp.LoginRsp> future = executor.submit(new Callable<TalkCloudApp.LoginRsp>() {
+                @Override
+                public TalkCloudApp.LoginRsp call() {
+                    return getGrpcConnect().getBlockingStub().login(loginReq);
+                }
+            });
 
-        private GrpcRegisterTask() {
+            loginRsp = future.get();
+        } catch (Exception e) {
+
         }
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            loading.show();
+        loading.dismiss();
+        if(loginRsp == null){
+            Toast.makeText(LoginActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        //判断result code
+        if(loginRsp.getRes().getCode() != 200){
+            Toast.makeText(LoginActivity.this, loginRsp.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        @Override
-        protected TalkCloudApp.AppRegRsp doInBackground(String... params) {
-            String name = params[0];
-            String password = params[1];
-            TalkCloudApp.AppRegRsp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.AppRegReq regReq = TalkCloudApp.AppRegReq.newBuilder().setName(name).setPassword(password).build();
-                replay = stub.appRegister(regReq);
-                return replay;
-            } catch (Exception e) {
-               return replay;
-            }
+        //保存数据
+        ArrayList<UserFriendBean> userFriendBeanArrayList = new ArrayList<>();
+        ArrayList<UserGroupBean> userGroupBeanArrayList = new ArrayList<>();
+        UserBean userBean = new UserBean();
+        userBean.setiMei(loginRsp.getUserInfo().getIMei());
+        userBean.setNickName(loginRsp.getUserInfo().getNickName());
+        userBean.setUserName(loginRsp.getUserInfo().getUserName());
+        userBean.setUserId(loginRsp.getUserInfo().getId());
+        for (TalkCloudApp.FriendRecord friendRecord: loginRsp.getFriendListList()) {
+            UserFriendBean  userFriendBean = new UserFriendBean();
+            userFriendBean.setUserFriendName(friendRecord.getName());
+            userFriendBean.setUserFriendId(friendRecord.getUid());
+            userFriendBeanArrayList.add(userFriendBean);
         }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.AppRegRsp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
+        for (TalkCloudApp.GroupInfo groupRecord: loginRsp.getGroupListList()) {
+            UserGroupBean userGroupBean = new UserGroupBean();
+            userGroupBean.setUserGroupName(groupRecord.getGroupName());
+            userGroupBean.setUserGroupId(groupRecord.getGid());
+            ArrayList<UserFriendBean> memberList = new ArrayList<>();
+            for (TalkCloudApp.UserRecord userRecord: groupRecord.getUsrListList()) {
+                UserFriendBean  userFriendBean1 = new UserFriendBean();
+                userFriendBean1.setUserFriendName(userRecord.getName());
+                userFriendBean1.setUserFriendId(userRecord.getUid());
+                userFriendBean1.setGroupRole(userRecord.getGrpRole());
+                if(loginRsp.getUserInfo().getId() == userRecord.getUid() && userRecord.getGrpRole() == 2){
+                    userGroupBean.setUserGroupRole(2);
+                }else{
+                    userGroupBean.setUserGroupRole(2);
+                }
+                userFriendBean1.setOnline(userRecord.getOnline());
+                memberList.add(userFriendBean1);
             }
-
-            loading.dismiss();
-            if(result == null){
-                Toast.makeText(LoginActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if(result.getRes().getCode() != 200){
-                Toast.makeText(LoginActivity.this,result.getRes().getMsg(),Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            //保存数据
-            UserBean userBean = new UserBean();
-            userBean.setUserName(result.getUserName());
-            userBean.setUserId(result.getId());
-            UserBean.setUserBean(userBean);
-
-            MyApplication.setUserId(result.getId());
-            MyApplication.setUserName(result.getUserName());
-            MyApplication.setPassword(editPassword.getText().toString());
-            MyApplication.setLoginState("login");
-
-            Toast.makeText(LoginActivity.this,R.string.login_register_success_tips,Toast.LENGTH_SHORT).show();
-            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-            startActivity(intent);
-            finish();
+            userGroupBean.setUserFriendBeanArrayList(memberList);
+            userGroupBeanArrayList.add(userGroupBean);
         }
+        userBean.setUserFriendBeanArrayList(userFriendBeanArrayList);
+        userBean.setUserGroupBeanArrayList(userGroupBeanArrayList);
+        UserBean.setUserBean(userBean);
+
+        //判断是否存在默认进入的群组id，如果没有则默认第一个群组id
+        if(MyApplication.getDefaultGroupId() == 0 && userGroupBeanArrayList.size()>0){
+            MyApplication.setDefaultGroupId(userGroupBeanArrayList.get(0).getUserGroupId());
+        }
+        MyApplication.setUserId(loginRsp.getUserInfo().getId());
+        MyApplication.setUserName(loginRsp.getUserInfo().getUserName());
+        MyApplication.setPassword(editPassword.getText().toString());
+        MyApplication.setLoginState("login");
+
+        Toast.makeText(LoginActivity.this, R.string.login_login_success_tips, Toast.LENGTH_SHORT).show();
+        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+        startActivity(intent);
+        finish();
     }
 
     // 物理返回键退出程序

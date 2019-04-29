@@ -44,12 +44,17 @@ import org.webrtc.MediaStream;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
 import talk_cloud.TalkCloudGrpc;
+
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
 
 public class GroupCreateActivity extends AppCompatActivity implements MyControlCallBack {
 
@@ -146,7 +151,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
                                                userIds = userIds +","+userFriendBean.getUserFriendId();
                                            }
                                        }
-                                       new GrpcCreateGroupTask().execute(userIds,editText.getText().toString());
+                                       createGroup(userIds, editText.getText().toString());
                                    }
                                }
                            })
@@ -169,8 +174,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
                                            userIds = userIds +","+userFriendBean.getUserFriendId();
                                        }
                                    }
-                                   new GrpcGroupAddMebmberTask().execute(userIds);
-
+                                   addGroupMember(userIds);
                                }
                            })
                            .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
@@ -365,128 +369,90 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
     }
 
     //添加群组请求
-    class GrpcCreateGroupTask extends AsyncTask<String, Void, TalkCloudApp.CreateGroupResp> {
-        private ManagedChannel channel;
+    public void createGroup(String userIds, String groupName) {
+        loading.show();
 
-        private GrpcCreateGroupTask() {
-            loading.show();
+        int accountId = 0;
+        if(UserBean.getUserBean() != null){
+            accountId = UserBean.getUserBean().getUserId();
         }
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
+        TalkCloudApp.CreateGroupReq createGroupReq = TalkCloudApp.CreateGroupReq.newBuilder().setDeviceIds(userIds).setGroupName(groupName).setAccountId(accountId).build();
+        TalkCloudApp.CreateGroupResp createGroupResp = null;
+        try {
+            Future<TalkCloudApp.CreateGroupResp> future = executor.submit(new Callable<TalkCloudApp.CreateGroupResp>() {
+                @Override
+                public TalkCloudApp.CreateGroupResp call() throws Exception {
+                    return getGrpcConnect().getBlockingStub().createGroup(createGroupReq);
+                }
+            });
+
+            createGroupResp = future.get();
+        } catch (Exception e) {
+
         }
 
-        @Override
-        protected TalkCloudApp.CreateGroupResp doInBackground(String... params) {
-            int accountId = 0;
-            if(UserBean.getUserBean() != null){
-                accountId = UserBean.getUserBean().getUserId();
-            }
+        loading.dismiss();
 
-            TalkCloudApp.CreateGroupResp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.CreateGroupReq regReq = TalkCloudApp.CreateGroupReq.newBuilder().setDeviceIds(params[0]).setGroupName(params[1]).setAccountId(accountId).build();
-                replay = stub.createGroup(regReq);
-                return replay;
-            } catch (Exception e) {
-                return replay;
-            }
+        if (createGroupResp == null) {
+            Toast.makeText(GroupCreateActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+            return;
         }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.CreateGroupResp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            loading.dismiss();
-
-            if (result == null) {
-                Toast.makeText(GroupCreateActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if (result.getRes().getCode() != 200) {
-                Toast.makeText(GroupCreateActivity.this, result.getRes().getMsg(), Toast.LENGTH_SHORT).show();
-                return;
-            } else {
-                //创建成功
-                JanusControl.sendCreateGroup(GroupCreateActivity.this,(int)(result.getGroupInfo().getGid()));
-                GroupCreateActivity.this.finish();
-            }
-
+        //判断createGroupResp code
+        if (createGroupResp.getRes().getCode() != 200) {
+            Toast.makeText(GroupCreateActivity.this, createGroupResp.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+            return;
+        } else {
+            //创建成功
+            JanusControl.sendCreateGroup(GroupCreateActivity.this,(int)(createGroupResp.getGroupInfo().getGid()));
+            GroupCreateActivity.this.finish();
         }
     }
 
     //添加好友进群
-    class GrpcGroupAddMebmberTask extends AsyncTask<String, Void, TalkCloudApp.CreateGroupResp> {
-        private ManagedChannel channel;
-
-        private GrpcGroupAddMebmberTask() {
-            loading.show();
+    public void addGroupMember(String userIds) {
+        int accountId = 0;
+        if(UserBean.getUserBean() != null){
+            accountId = UserBean.getUserBean().getUserId();
         }
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        @Override
-        protected TalkCloudApp.CreateGroupResp doInBackground(String... params) {
-            int accountId = 0;
-            if(UserBean.getUserBean() != null){
-                accountId = UserBean.getUserBean().getUserId();
-            }
-
-            TalkCloudApp.CreateGroupResp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.CreateGroupReq regReq = TalkCloudApp.CreateGroupReq.newBuilder().setDeviceIds(params[0]).setGroupName(params[1]).setAccountId(accountId).build();
-                replay = stub.createGroup(regReq);
-                return replay;
-            } catch (Exception e) {
-                return replay;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.CreateGroupResp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            loading.dismiss();
-
-            if (result == null) {
-                Toast.makeText(GroupCreateActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if (result.getRes().getCode() != 200) {
-                Toast.makeText(GroupCreateActivity.this, result.getRes().getMsg(), Toast.LENGTH_SHORT).show();
-                return;
-            } else {
-                //添加成功，
-                Toast.makeText(GroupCreateActivity.this, R.string.new_group_str_add_member_success, Toast.LENGTH_SHORT).show();
-
-                for (UserFriendBean userFriendBean: myList) {
-                    userFriendBean.setCheck(false);
-                    userFriendBean.setInGroup(false);
+        TalkCloudApp.InviteUserReq inviteUserReq = TalkCloudApp.InviteUserReq.newBuilder().setGid(groupPosition).setUids(userIds).build();
+        TalkCloudApp.InviteUserResp inviteUserResp = null;
+        try {
+            Future<TalkCloudApp.InviteUserResp> future = executor.submit(new Callable<TalkCloudApp.InviteUserResp>() {
+                @Override
+                public TalkCloudApp.InviteUserResp call() throws Exception {
+                    return getGrpcConnect().getBlockingStub().inviteUserIntoGroup(inviteUserReq);
                 }
-                setResult(RESULT_OK);
-                GroupCreateActivity.this.finish();
-            }
+            });
 
+            inviteUserResp = future.get();
+        } catch (Exception e) {
+
+        }
+
+        loading.dismiss();
+
+        if (inviteUserResp == null) {
+            Toast.makeText(GroupCreateActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        //判断inviteUserResp code
+        if (inviteUserResp.getRes().getCode() != 200) {
+            Toast.makeText(GroupCreateActivity.this, inviteUserResp.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+            return;
+        } else {
+            //添加成功，
+            Toast.makeText(GroupCreateActivity.this, R.string.new_group_str_add_member_success, Toast.LENGTH_SHORT).show();
+
+            for (UserFriendBean userFriendBean: myList) {
+                userFriendBean.setCheck(false);
+                userFriendBean.setInGroup(false);
+            }
+            setResult(RESULT_OK);
+            GroupCreateActivity.this.finish();
         }
     }
-
-
 
     @Override
     public void janusServer(int code,String msg) {

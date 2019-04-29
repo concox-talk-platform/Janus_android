@@ -273,6 +273,7 @@ message CreateGroupResp {
     Result res = 2;
 }
 
+//user join group
 message GrpUserAddReq {
     int32 uid = 1;
     int32 gid = 2;
@@ -335,7 +336,6 @@ message GrpSearchReq {
     int32 uid = 1;
     string target = 2;
 }
-
 
 message InviteUserReq {
     int32 gid = 1;

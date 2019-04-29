@@ -106,7 +106,6 @@ public class GroupMemberListActivity extends AppCompatActivity{
                 startActivityForResult(intent,1000);
             }
         });
-
     }
 
     //群组列表adapter

@@ -24,16 +24,23 @@ import com.example.janusandroidtalk.dialog.CustomProgressDialog;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.tools.AppTools;
 
+import org.webrtc.CryptoOptions;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
 import talk_cloud.TalkCloudGrpc;
+
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
 
 public class SearchActivity extends AppCompatActivity {
 
@@ -106,13 +113,15 @@ public class SearchActivity extends AppCompatActivity {
                             case 0:
                                 //搜索群组
                                 if (UserBean.getUserBean() != null) {
-                                    new GrpcSearchGroupListTask().execute(UserBean.getUserBean().getUserId() + "", editSearch.getText().toString());
+//                                    new GrpcSearchGroupListTask().execute(UserBean.getUserBean().getUserId() + "", editSearch.getText().toString());
+                                    searchGroupList();
                                 }
                                 break;
                             case 1:
                                 //搜索好友
                                 if (UserBean.getUserBean() != null) {
-                                    new GrpcSearchFriendListTask().execute(UserBean.getUserBean().getUserId() + "", editSearch.getText().toString());
+//                                    new GrpcSearchFriendListTask().execute(UserBean.getUserBean().getUserId() + "", editSearch.getText().toString());
+                                    searchFriendList();
                                 }
                                 break;
                         }
@@ -125,73 +134,188 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     //搜索群组列表请求
-    class GrpcSearchGroupListTask extends AsyncTask<String, Void, TalkCloudApp.GroupListRsp> {
-        private ManagedChannel channel;
+    public void searchGroupList() {
+        loading.show();
 
-        private GrpcSearchGroupListTask() {
-
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            loading.show();
-        }
-
-        @Override
-        protected TalkCloudApp.GroupListRsp doInBackground(String... params) {
-            int id = Integer.parseInt(params[0]);
-            TalkCloudApp.GroupListRsp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.GrpSearchReq regReq = TalkCloudApp.GrpSearchReq.newBuilder().setUid(id).setTarget(params[1]).build();
-                replay = stub.searchGroup(regReq);
-                return replay;
-            } catch (Exception e) {
-                return replay;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.GroupListRsp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            loading.dismiss();
-            if(result == null){
-                Toast.makeText(SearchActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if(result.getRes().getCode() != 200){
-                Toast.makeText(SearchActivity.this,result.getRes().getMsg(),Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断列表数据为空
-            if(result.getGroupListList().size() == 0){
-                Toast.makeText(SearchActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            myList.clear();
-            for (TalkCloudApp.GroupInfo groupListRsp : result.getGroupListList()) {
-                Map<String,String> map1 = new HashMap<String,String>();
-                map1.put("name",groupListRsp.getGroupName());
-                map1.put("gid",groupListRsp.getGid()+"");
-                if(groupListRsp.getIsExist()){
-                    map1.put("isExist","1");
-                }else{
-                    map1.put("isExist","0");
+        int id = UserBean.getUserBean().getUserId();
+        String target = editSearch.getText().toString();
+        TalkCloudApp.GrpSearchReq regReq = TalkCloudApp.GrpSearchReq.newBuilder().setUid(id).setTarget(target).build();
+        TalkCloudApp.GroupListRsp result = null;
+        try {
+            Future<TalkCloudApp.GroupListRsp> future = executor.submit(new Callable<TalkCloudApp.GroupListRsp>() {
+                @Override
+                public TalkCloudApp.GroupListRsp call() throws Exception {
+                    return getGrpcConnect().getBlockingStub().searchGroup(regReq);
                 }
-                myList.add(map1);
+            });
+
+            result = future.get();
+        } catch (Exception e) {
+
+        }
+
+        loading.dismiss();
+        if(result == null){
+            Toast.makeText(SearchActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
+            return;
+        }
+        //判断result code
+        if(result.getRes().getCode() != 200){
+            Toast.makeText(SearchActivity.this,result.getRes().getMsg(),Toast.LENGTH_SHORT).show();
+            return;
+        }
+        //判断列表数据为空
+        if(result.getGroupListList().size() == 0){
+            Toast.makeText(SearchActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        myList.clear();
+        for (TalkCloudApp.GroupInfo groupListRsp : result.getGroupListList()) {
+            Map<String,String> map1 = new HashMap<String,String>();
+            map1.put("name",groupListRsp.getGroupName());
+            map1.put("gid",groupListRsp.getGid()+"");
+            if(groupListRsp.getIsExist()){
+                map1.put("isExist","1");
+            }else{
+                map1.put("isExist","0");
+            }
+            myList.add(map1);
+        }
+
+        searchGroupListAdapter = new SearchGroupListAdapter();
+        listView.setAdapter(searchGroupListAdapter);
+    }
+
+    //搜索好友列表请求
+    public void searchFriendList() {
+        loading.show();
+
+        int id = UserBean.getUserBean().getUserId();
+        String target = editSearch.getText().toString();
+        TalkCloudApp.UserSearchReq regReq = TalkCloudApp.UserSearchReq.newBuilder().setUid(id).setTarget(target).build();
+        TalkCloudApp.UserSearchRsp result = null;
+        try {
+            Future<TalkCloudApp.UserSearchRsp> future = executor.submit(new Callable<TalkCloudApp.UserSearchRsp>() {
+                @Override
+                public TalkCloudApp.UserSearchRsp call() throws Exception {
+                    return getGrpcConnect().getBlockingStub().searchUserByKey(regReq);
+                }
+            });
+
+            result = future.get();
+        } catch (Exception e) {
+
+        }
+
+        loading.dismiss();
+        if(result == null){
+            Toast.makeText(SearchActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
+            return;
+        }
+        //判断result code
+        if(result.getRes().getCode() != 200){
+            Toast.makeText(SearchActivity.this,result.getRes().getMsg(),Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        //判断列表数据为空
+        if(result.getUserListList().size() == 0){
+            Toast.makeText(SearchActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        myList.clear();
+        for (TalkCloudApp.UserRecord userRecord : result.getUserListList()) {
+            Map<String,String> map1 = new HashMap<String,String>();
+            map1.put("name",userRecord.getName());
+            map1.put("uid",userRecord.getUid()+"");
+            if(userRecord.getIsFriend()){
+                map1.put("isFriend","1");
+            }else{
+                map1.put("isFriend","0");
             }
 
-            searchGroupListAdapter = new SearchGroupListAdapter();
-            listView.setAdapter(searchGroupListAdapter);
+            myList.add(map1);
+        }
+
+        searchFriendListAdapter = new SearchFriendListAdapter();
+        listView.setAdapter(searchFriendListAdapter);
+    }
+
+    //添加群组请求
+    public void userAddGroup(String uidStr, String gidStr) {
+        loading.show();
+
+        int uid = Integer.parseInt(uidStr);
+        int gid = Integer.parseInt(gidStr);
+        TalkCloudApp.GrpUserAddReq grpUserAddReq = TalkCloudApp.GrpUserAddReq.newBuilder().setUid(uid).setGid(gid).build();
+        TalkCloudApp.GrpUserAddRsp grpUserAddRsp = null;
+        try {
+            Future<TalkCloudApp.GrpUserAddRsp> future = executor.submit(new Callable<TalkCloudApp.GrpUserAddRsp>() {
+                @Override
+                public TalkCloudApp.GrpUserAddRsp call() throws Exception {
+                    return getGrpcConnect().getBlockingStub().joinGroup(grpUserAddReq);
+                }
+            });
+
+            grpUserAddRsp = future.get();
+        } catch (Exception e) {
+            //TODO Nothing here
+        }
+
+        loading.dismiss();
+
+        if(grpUserAddRsp == null){
+            Toast.makeText(SearchActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        //判断result code
+        if(grpUserAddRsp.getRes().getCode() != 200){
+            Toast.makeText(SearchActivity.this, grpUserAddRsp.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+            return;
+        }else{
+            Toast.makeText(SearchActivity.this, R.string.search_str_added_friend, Toast.LENGTH_SHORT).show();
+            myList.get(myPosition).put("isExist", "1");
+            searchGroupListAdapter.notifyDataSetChanged();
+        }
+    }
+
+    //添加好友请求
+    public void userAddFriend(String uidStr, String friendIdStr) {
+        loading.show();
+
+        int uid = Integer.parseInt(uidStr);
+        int friendId = Integer.parseInt(friendIdStr);
+        TalkCloudApp.FriendNewReq friendNewReq = TalkCloudApp.FriendNewReq.newBuilder().setUid(uid).setFuid(friendId).build();
+        TalkCloudApp.FriendNewRsp friendNewRsp = null;
+        try {
+            Future<TalkCloudApp.FriendNewRsp> future = executor.submit(new Callable<TalkCloudApp.FriendNewRsp>() {
+                @Override
+                public TalkCloudApp.FriendNewRsp call() throws Exception {
+                    return getGrpcConnect().getBlockingStub().addFriend(friendNewReq);
+                }
+            });
+
+            friendNewRsp = future.get();
+        } catch (Exception e) {
+            //TODO Nothing here
+        }
+
+        loading.dismiss();
+
+        if(friendNewRsp == null){
+            Toast.makeText(SearchActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        //判断friendNewRsp code
+        if(friendNewRsp.getRes().getCode() != 200){
+            Toast.makeText(SearchActivity.this, friendNewRsp.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+            return;
+        }else{
+            Toast.makeText(SearchActivity.this, R.string.search_str_added_friend, Toast.LENGTH_SHORT).show();
+            myList.get(myPosition).put("isFriend", "1");
+            searchFriendListAdapter.notifyDataSetChanged();
         }
     }
 
@@ -246,7 +370,8 @@ public class SearchActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     myPosition = position;
                     if (UserBean.getUserBean() != null) {
-                        new GrpcAddGroupTask().execute(UserBean.getUserBean().getUserId() + "", map.get("gid"));
+//                        new GrpcAddGroupTask().execute(UserBean.getUserBean().getUserId() + "", map.get("gid"));
+                        userAddGroup(UserBean.getUserBean().getUserId() + "", map.get("gid"));
                     }
                 }
             });
@@ -259,135 +384,6 @@ public class SearchActivity extends AppCompatActivity {
             TextView nameTextView;
             TextView stateTextView;
             TextView textViewBtn;
-        }
-    }
-
-    //添加群组请求
-    class GrpcAddGroupTask extends AsyncTask<String, Void,TalkCloudApp.GrpUserAddRsp> {
-        private ManagedChannel channel;
-
-        private GrpcAddGroupTask() {
-            loading.show();
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        @Override
-        protected TalkCloudApp.GrpUserAddRsp doInBackground(String... params) {
-            int id = Integer.parseInt(params[0]);
-            int gid = Integer.parseInt(params[1]);
-            TalkCloudApp.GrpUserAddRsp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.GrpUserAddReq regReq = TalkCloudApp.GrpUserAddReq.newBuilder().setUid(id).setGid(gid).build();
-                replay = stub.joinGroup(regReq);
-                return replay;
-            } catch (Exception e) {
-                return replay;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.GrpUserAddRsp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            loading.dismiss();
-
-            if(result == null){
-                Toast.makeText(SearchActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if(result.getRes().getCode() != 200){
-                Toast.makeText(SearchActivity.this,result.getRes().getMsg(),Toast.LENGTH_SHORT).show();
-                return;
-            }else{
-                Toast.makeText(SearchActivity.this,R.string.search_str_added_friend,Toast.LENGTH_SHORT).show();
-                myList.get(myPosition).put("isExist","1");
-                searchGroupListAdapter.notifyDataSetChanged();
-            }
-
-        }
-    }
-
-    //搜索好友列表请求
-    class GrpcSearchFriendListTask extends AsyncTask<String, Void,TalkCloudApp.UserSearchRsp> {
-        private ManagedChannel channel;
-
-        private GrpcSearchFriendListTask() {
-
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            loading.show();
-        }
-
-        @Override
-        protected TalkCloudApp.UserSearchRsp doInBackground(String... params) {
-            int id = Integer.parseInt(params[0]);
-            TalkCloudApp.UserSearchRsp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.UserSearchReq regReq = TalkCloudApp.UserSearchReq.newBuilder().setUid(id).setTarget(params[1]).build();
-                replay = stub.searchUserByKey(regReq);
-                return replay;
-            } catch (Exception e) {
-                return replay;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.UserSearchRsp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            loading.dismiss();
-            if(result == null){
-                Toast.makeText(SearchActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if(result.getRes().getCode() != 200){
-                Toast.makeText(SearchActivity.this,result.getRes().getMsg(),Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            //判断列表数据为空
-            if(result.getUserListList().size() == 0){
-                Toast.makeText(SearchActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            myList.clear();
-            for (TalkCloudApp.UserRecord userRecord : result.getUserListList()) {
-                Map<String,String> map1 = new HashMap<String,String>();
-                map1.put("name",userRecord.getName());
-                map1.put("uid",userRecord.getUid()+"");
-                if(userRecord.getIsFriend()){
-                    map1.put("isFriend","1");
-                }else{
-                    map1.put("isFriend","0");
-                }
-
-                myList.add(map1);
-            }
-
-            searchFriendListAdapter = new SearchFriendListAdapter();
-            listView.setAdapter(searchFriendListAdapter);
-
         }
     }
 
@@ -442,7 +438,7 @@ public class SearchActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     myPosition = position;
                     if (UserBean.getUserBean() != null) {
-                        new GrpcAddFriendTask().execute(UserBean.getUserBean().getUserId() + "", map.get("uid"));
+                        userAddFriend(UserBean.getUserBean().getUserId() + "", map.get("uid"));
                     }
                 }
             });
@@ -455,61 +451,6 @@ public class SearchActivity extends AppCompatActivity {
             TextView nameTextView;
             TextView stateTextView;
             TextView textViewBtn;
-        }
-    }
-
-    //添加好友请求
-    class GrpcAddFriendTask extends AsyncTask<String, Void,TalkCloudApp.FriendNewRsp> {
-        private ManagedChannel channel;
-
-        private GrpcAddFriendTask() {
-            loading.show();
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        @Override
-        protected TalkCloudApp.FriendNewRsp doInBackground(String... params) {
-            int id = Integer.parseInt(params[0]);
-            int fid = Integer.parseInt(params[1]);
-            TalkCloudApp.FriendNewRsp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.FriendNewReq regReq = TalkCloudApp.FriendNewReq.newBuilder().setUid(id).setFuid(fid).build();
-                replay = stub.addFriend(regReq);
-                return replay;
-            } catch (Exception e) {
-                return replay;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.FriendNewRsp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            loading.dismiss();
-
-            if(result == null){
-                Toast.makeText(SearchActivity.this,R.string.request_data_null_tips,Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if(result.getRes().getCode() != 200){
-                Toast.makeText(SearchActivity.this,result.getRes().getMsg(),Toast.LENGTH_SHORT).show();
-                return;
-            }else{
-                Toast.makeText(SearchActivity.this,R.string.search_str_added_friend,Toast.LENGTH_SHORT).show();
-                myList.get(myPosition).put("isFriend","1");
-                searchFriendListAdapter.notifyDataSetChanged();
-            }
-
         }
     }
 }

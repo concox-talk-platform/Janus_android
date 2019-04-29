@@ -4,7 +4,6 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -35,7 +34,6 @@ import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
 import com.example.janusandroidtalk.pullrecyclerview.layoutmanager.XLinearLayoutManager;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
-import com.example.janusandroidtalk.tools.AppTools;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -43,12 +41,13 @@ import org.webrtc.MediaStream;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
-import talk_cloud.TalkCloudGrpc;
+
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
 
 
 public class FragmentGroup extends Fragment implements MyControlCallBack{
@@ -114,14 +113,13 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             public void onPullRefresh() {
                 // 下拉刷新事件被触发
                 if (UserBean.getUserBean() != null) {
-                    new GrpcGetGroupListTask().execute(UserBean.getUserBean().getUserId() + "");
+                    buildGroupInfo();
                 }
             }
 
             @Override
             public void onLoadMore() {
                 // 上拉加载更多事件被触发
-
             }
         });
 
@@ -145,91 +143,71 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
 
     }
 
-    class GrpcGetGroupListTask extends AsyncTask<String, Void, TalkCloudApp.GroupListRsp> {
-        private ManagedChannel channel;
-
-        private GrpcGetGroupListTask() {
-
-        }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-        }
-
-        @Override
-        protected TalkCloudApp.GroupListRsp doInBackground(String... params) {
-            int id = Integer.parseInt(params[0]);
-            TalkCloudApp.GroupListRsp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-
-                TalkCloudApp.GrpListReq regReq = TalkCloudApp.GrpListReq.newBuilder().setUid(id).build();
-                replay = stub.getGroupList(regReq);
-                return replay;
-            } catch (Exception e) {
-                return replay;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.GroupListRsp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-
-            mPullRecyclerView.stopRefresh();
-            if (result == null) {
-                Toast.makeText(getContext(), R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if(result.getRes().getCode() != 200){
-                Toast.makeText(getContext(),result.getRes().getMsg(),Toast.LENGTH_SHORT).show();
-                return;
-            }
-
-            if(myList.size() != 0){
-                myList .clear();
-            }
-
-            ArrayList<UserGroupBean> userGroupBeanArrayList = new ArrayList<UserGroupBean>();
-            for (TalkCloudApp.GroupInfo groupRecord : result.getGroupListList()) {
-                UserGroupBean userGroupBean = new UserGroupBean();
-                userGroupBean.setUserGroupId(groupRecord.getGid());
-                userGroupBean.setUserGroupName(groupRecord.getGroupName());
-                ArrayList<UserFriendBean> memberList = new ArrayList<>();
-                for (TalkCloudApp.UserRecord userRecord: groupRecord.getUsrListList()) {
-                    UserFriendBean  userFriendBean1 = new UserFriendBean();
-                    userFriendBean1.setUserFriendName(userRecord.getName());
-                    userFriendBean1.setUserFriendId(userRecord.getUid());
-                    userFriendBean1.setGroupRole(userRecord.getGrpRole());
-                    if(userRecord.getUid() == MyApplication.getUserId() && userRecord.getGrpRole() == 2){
-                        userGroupBean.setUserGroupRole(2);
-                    }else{
-                        userGroupBean.setUserGroupRole(1);
-                    }
-                    userFriendBean1.setOnline(userRecord.getOnline());
-                    memberList.add(userFriendBean1);
+    //Initialize groups' info
+    public void buildGroupInfo() {
+        TalkCloudApp.GrpListReq grpListReq = TalkCloudApp.GrpListReq.newBuilder().setUid(UserBean.getUserBean().getUserId()).build();
+        TalkCloudApp.GroupListRsp groupListRsp = null;
+        try {
+            Future<TalkCloudApp.GroupListRsp> future = executor.submit(new Callable<TalkCloudApp.GroupListRsp>() {
+                @Override
+                public TalkCloudApp.GroupListRsp call() {
+                    return getGrpcConnect().getBlockingStub().getGroupList(grpListReq);
                 }
-                userGroupBean.setUserFriendBeanArrayList(memberList);
-                userGroupBeanArrayList.add(userGroupBean);
-            }
-            myList.addAll(userGroupBeanArrayList);
-            mAdapter.notifyDataSetChanged();
-            //保存group信息
-            if (UserBean.getUserBean() != null) {
-                UserBean.getUserBean().setUserGroupBeanArrayList(userGroupBeanArrayList);
-            }
+            });
 
-            //如果没有默认房间，创建新群组刷新之后，将会默认进入第一个群组里面，
-            if(MyApplication.getDefaultGroupId() == 0 && userGroupBeanArrayList.size()>0){
-                MyApplication.setDefaultGroupId(userGroupBeanArrayList.get(0).getUserGroupId());
-                JanusControl.sendPocRoomJoinRoom(FragmentGroup.this,MyApplication.getDefaultGroupId());
+            groupListRsp = future.get();
+        } catch (Exception e) {
+            //TODO Exception catch later
+        }
+
+        mPullRecyclerView.stopRefresh();
+        if (groupListRsp == null) {
+            Toast.makeText(getContext(), R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        //判断result code
+        if(groupListRsp.getRes().getCode() != 200){
+            Toast.makeText(getContext(), groupListRsp.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if(myList.size() != 0){
+            myList .clear();
+        }
+
+        ArrayList<UserGroupBean> userGroupBeanArrayList = new ArrayList<UserGroupBean>();
+        for (TalkCloudApp.GroupInfo groupRecord : groupListRsp.getGroupListList()) {
+            UserGroupBean userGroupBean = new UserGroupBean();
+            userGroupBean.setUserGroupId(groupRecord.getGid());
+            userGroupBean.setUserGroupName(groupRecord.getGroupName());
+            ArrayList<UserFriendBean> memberList = new ArrayList<>();
+            for (TalkCloudApp.UserRecord userRecord: groupRecord.getUsrListList()) {
+                UserFriendBean  userFriendBean1 = new UserFriendBean();
+                userFriendBean1.setUserFriendName(userRecord.getName());
+                userFriendBean1.setUserFriendId(userRecord.getUid());
+                userFriendBean1.setGroupRole(userRecord.getGrpRole());
+                if(userRecord.getUid() == MyApplication.getUserId() && userRecord.getGrpRole() == 2){
+                    userGroupBean.setUserGroupRole(2);
+                }else{
+                    userGroupBean.setUserGroupRole(1);
+                }
+                userFriendBean1.setOnline(userRecord.getOnline());
+                memberList.add(userFriendBean1);
             }
+            userGroupBean.setUserFriendBeanArrayList(memberList);
+            userGroupBeanArrayList.add(userGroupBean);
+        }
+        myList.addAll(userGroupBeanArrayList);
+        mAdapter.notifyDataSetChanged();
+        //保存group信息
+        if (UserBean.getUserBean() != null) {
+            UserBean.getUserBean().setUserGroupBeanArrayList(userGroupBeanArrayList);
+        }
+
+        //如果没有默认房间，创建新群组刷新之后，将会默认进入第一个群组里面，
+        if(MyApplication.getDefaultGroupId() == 0 && userGroupBeanArrayList.size()>0){
+            MyApplication.setDefaultGroupId(userGroupBeanArrayList.get(0).getUserGroupId());
+            JanusControl.sendPocRoomJoinRoom(FragmentGroup.this,MyApplication.getDefaultGroupId());
         }
     }
 
