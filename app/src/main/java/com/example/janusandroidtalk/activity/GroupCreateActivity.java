@@ -2,9 +2,7 @@ package com.example.janusandroidtalk.activity;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.Context;
 import android.content.DialogInterface;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -16,7 +14,6 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.BaseAdapter;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -28,7 +25,6 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
@@ -37,22 +33,16 @@ import com.example.janusandroidtalk.dialog.CustomProgressDialog;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
-import com.example.janusandroidtalk.tools.AppTools;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.webrtc.MediaStream;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
-import talk_cloud.TalkCloudGrpc;
 
 import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
 import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
@@ -398,7 +388,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
 
             createGroupResp = future.get();
         } catch (Exception e) {
-
+            //TODO Nothing here
         }
 
         loading.dismiss();

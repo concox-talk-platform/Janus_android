@@ -4,7 +4,6 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.view.KeyEvent;
@@ -22,18 +21,13 @@ import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
-import com.example.janusandroidtalk.tools.AppTools;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
-import talk_cloud.TalkCloudGrpc;
 
 import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
 import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
@@ -168,7 +162,27 @@ public class GroupMemberListActivity extends AppCompatActivity{
         }
     }
 
-    //删除群组成员
+    public void deleteGroupMember(int deleteUserId){
+        final AlertDialog dialog = new AlertDialog.Builder(GroupMemberListActivity.this)
+                .setMessage(R.string.group_member_delete_member_tips)
+                .setPositiveButton(R.string.dialog_commit, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                        //Todo 调用删除群组成员接口
+                        groupDeleteMember(deleteUserId);
+                    }
+                })
+                .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                }).create();
+        dialog.show();
+    }
+
+    // 删除群组成员
     // Delete group member thread
     public void groupDeleteMember(int deletedId) {
         TalkCloudApp.GrpUserDelReq grpUserDelReq = TalkCloudApp.GrpUserDelReq.newBuilder().setGid(groupPosition).setUid(deletedId).build();
@@ -205,32 +219,11 @@ public class GroupMemberListActivity extends AppCompatActivity{
         }
     }
 
-    public void deleteGroupMember(int deleteUserId){
-        final AlertDialog dialog = new AlertDialog.Builder(GroupMemberListActivity.this)
-                .setMessage(R.string.group_member_delete_member_tips)
-                .setPositiveButton(R.string.dialog_commit, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                        //Todo 调用删除群组成员接口
-                        groupDeleteMember(deleteUserId);
-                    }
-                })
-                .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                }).create();
-        dialog.show();
-    }
-
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
        if(resultCode == RESULT_OK && requestCode == 1000){
             userGroupBean = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
             myList = userGroupBean.getUserFriendBeanArrayList();
-            //TODO Do not update UserGroupBean's userFriendBeanArrayList, so that can not update adapter, fix it.
             groupListAdapter.notifyDataSetChanged();
        }
     }

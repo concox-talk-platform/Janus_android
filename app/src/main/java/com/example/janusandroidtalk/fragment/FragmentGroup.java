@@ -257,6 +257,7 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                                 public void onClick(DialogInterface dialog, int which) {
                                     //发送changeRoom信令 ,data.get("gid"),并在回调成功之后，保存默认群组Id,
                                     JanusControl.sendChangeGroup(FragmentGroup.this, data.getUserGroupId());
+                                    setLockGroupId();//TODO
                                     changeroomid = data.getUserGroupId();
                                     dialog.dismiss();
                                 }
@@ -342,10 +343,28 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                     break;
                 case 3:
                     MyApplication.setDefaultGroupId(changeroomid);
+                    setLockGroupId();//TODO
                     mAdapter.notifyDataSetChanged();
                     break;
             }
         };
     };
 
+    public void setLockGroupId() {
+        int gid = changeroomid;
+        int uid = UserBean.getUserBean().getUserId();
+        TalkCloudApp.SetLockGroupIdReq setLockGroupIdReq = TalkCloudApp.SetLockGroupIdReq.newBuilder().setGId(gid).setUId(uid).build();
+        TalkCloudApp.SetLockGroupIdResp setLockGroupIdResp = null;
+        try {
+            Future<TalkCloudApp.SetLockGroupIdResp> future = executor.submit(new Callable<TalkCloudApp.SetLockGroupIdResp>() {
+                @Override
+                public TalkCloudApp.SetLockGroupIdResp call() throws Exception {
+                    return getGrpcConnect().getBlockingStub().setLockGroupId(setLockGroupIdReq);
+                }
+            });
+
+        } catch (Exception e) {
+            // TODO Nothing here
+        }
+    }
 }

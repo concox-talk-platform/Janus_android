@@ -203,12 +203,16 @@ public class LoginActivity extends AppCompatActivity {
         userBean.setNickName(loginRsp.getUserInfo().getNickName());
         userBean.setUserName(loginRsp.getUserInfo().getUserName());
         userBean.setUserId(loginRsp.getUserInfo().getId());
+        userBean.setUserLoginState(true);
+
+        //初始化好友列表
         for (TalkCloudApp.FriendRecord friendRecord: loginRsp.getFriendListList()) {
             UserFriendBean  userFriendBean = new UserFriendBean();
             userFriendBean.setUserFriendName(friendRecord.getName());
             userFriendBean.setUserFriendId(friendRecord.getUid());
             userFriendBeanArrayList.add(userFriendBean);
         }
+        // 初始化群组列表
         for (TalkCloudApp.GroupInfo groupRecord: loginRsp.getGroupListList()) {
             UserGroupBean userGroupBean = new UserGroupBean();
             userGroupBean.setUserGroupName(groupRecord.getGroupName());
@@ -222,7 +226,7 @@ public class LoginActivity extends AppCompatActivity {
                 if(loginRsp.getUserInfo().getId() == userRecord.getUid() && userRecord.getGrpRole() == 2){
                     userGroupBean.setUserGroupRole(2);
                 }else{
-                    userGroupBean.setUserGroupRole(2);
+                    userGroupBean.setUserGroupRole(1);
                 }
                 userFriendBean1.setOnline(userRecord.getOnline());
                 memberList.add(userFriendBean1);
@@ -234,8 +238,10 @@ public class LoginActivity extends AppCompatActivity {
         userBean.setUserGroupBeanArrayList(userGroupBeanArrayList);
         UserBean.setUserBean(userBean);
 
+        MyApplication.setDefaultGroupId(loginRsp.getUserInfo().getLockGroupId());
+
         //判断是否存在默认进入的群组id，如果没有则默认第一个群组id
-        if(MyApplication.getDefaultGroupId() == 0 && userGroupBeanArrayList.size()>0){
+        if(MyApplication.getDefaultGroupId() == 0 && userGroupBeanArrayList.size() > 0){
             MyApplication.setDefaultGroupId(userGroupBeanArrayList.get(0).getUserGroupId());
         }
         MyApplication.setUserId(loginRsp.getUserInfo().getId());
