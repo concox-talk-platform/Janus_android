@@ -108,6 +108,11 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
         janusControl = new JanusControl(this,MyApplication.getUserName(),MyApplication.getUserId(),MyApplication.getDefaultGroupId());
         janusControl.Start();
 
+        //第一次进来发起请求
+        if (UserBean.getUserBean() != null) {
+            mPullRecyclerView.postRefreshing();
+            buildGroupInfo();
+        }
         mPullRecyclerView.setOnRecyclerRefreshListener(new PullRecyclerView.OnRecyclerRefreshListener() {
             @Override
             public void onPullRefresh() {
@@ -140,7 +145,6 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                 startActivity(new Intent(getContext(), GroupCreateActivity.class));
             }
         });
-
     }
 
     //Initialize groups' info

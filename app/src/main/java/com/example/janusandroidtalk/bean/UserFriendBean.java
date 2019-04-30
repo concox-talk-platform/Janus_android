@@ -8,7 +8,7 @@ public class UserFriendBean implements Serializable {
     private boolean userFriendLoginState;
     private int online;////1不在线，2在线
     private int groupRole; //2 群主  1 普通群成员
-    private boolean isCheck;
+    private boolean isCheck; //勾选状态
     private boolean isInGroup;
 
     public String getUserFriendName() {

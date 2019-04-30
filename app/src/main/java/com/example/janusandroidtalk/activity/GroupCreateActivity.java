@@ -28,6 +28,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
@@ -63,7 +64,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
     private TextView menu;
     private TextView title;
 
-    private List<UserFriendBean> myList = new ArrayList<>();
+    private ArrayList<UserFriendBean> myList = new ArrayList<>();
     private ImageView toolbarBack = null;
     private ListView listView;
 
@@ -75,6 +76,9 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
     private int groupPosition = 0;//当前群组
     private int addFlag = 0;//0为创建群组，1为添加成员，
     private UserGroupBean userGroupBean;//当前群组对象，
+
+    // 当前群组已添加成员列表
+    private ArrayList<UserFriendBean> addedList = new ArrayList<>();
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -100,6 +104,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
                 for(UserFriendBean userFriendBeanMember: userGroupBean.getUserFriendBeanArrayList()){
                     if(userFriendBean.getUserFriendId() == userFriendBeanMember.getUserFriendId()){
                         userFriendBean.setInGroup(true);
+                        addedList.add(userFriendBean);
                     }
                 }
             }
@@ -148,7 +153,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
                                        dialog.dismiss();
                                        for (UserFriendBean userFriendBean: myList) {
                                            if(userFriendBean.isCheck()){
-                                               userIds = userIds +","+userFriendBean.getUserFriendId();
+                                               userIds = userIds + "," + userFriendBean.getUserFriendId();
                                            }
                                        }
                                        createGroup(userIds, editText.getText().toString());
@@ -171,7 +176,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
                                    dialog.dismiss();
                                    for (UserFriendBean userFriendBean: myList) {
                                        if(userFriendBean.isCheck()){
-                                           userIds = userIds +","+userFriendBean.getUserFriendId();
+                                           userIds = userIds + "," + userFriendBean.getUserFriendId();
                                        }
                                    }
                                    addGroupMember(userIds);
@@ -245,10 +250,14 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
 
             holder.nameTextView.setText(myList.get(position).getUserFriendName());
             holder.stateTextView.setText(myList.get(position).getUserFriendId() + "");
-            if(addFlag == 1 && myList.get(position).isInGroup()){
-                holder.checkBox.setVisibility(View.GONE);
-                holder.textViewInGroup.setVisibility(View.VISIBLE);
-                holder.textViewInGroup.setText(R.string.search_str_added_group);
+            if(addFlag == 1){
+                for (UserFriendBean userFriendBean: addedList) {
+                    if (userFriendBean.getUserFriendId() == myList.get(position).getUserFriendId()) {
+                        holder.checkBox.setVisibility(View.GONE);
+                        holder.textViewInGroup.setVisibility(View.VISIBLE);
+                        holder.textViewInGroup.setText(R.string.search_str_added_group);
+                    }
+                }
             }else{
                 holder.checkBox.setVisibility(View.VISIBLE);
                 holder.textViewInGroup.setVisibility(View.GONE);
@@ -259,7 +268,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
             holder.checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                    String sure =getResources().getString(R.string.toolbar_commit);
+                    String sure = getResources().getString(R.string.toolbar_commit);
                     if (isChecked) {
                         myList.get(position).setCheck(true);
                         sum = sum + 1;
@@ -350,7 +359,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
             @Override
             protected void publishResults(CharSequence constraint, FilterResults results) {
                 //noinspection unchecked
-                myList = (List<UserFriendBean>) results.values;
+                myList = (ArrayList<UserFriendBean>) results.values;
                 if (results.count > 0) {
                     notifyDataSetChanged();
                 } else {
@@ -404,19 +413,17 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
             return;
         } else {
             //创建成功
-            JanusControl.sendCreateGroup(GroupCreateActivity.this,(int)(createGroupResp.getGroupInfo().getGid()));
+            JanusControl.sendCreateGroup(GroupCreateActivity.this, (int)(createGroupResp.getGroupInfo().getGid()));
             GroupCreateActivity.this.finish();
         }
     }
 
     //添加好友进群
     public void addGroupMember(String userIds) {
-        int accountId = 0;
-        if(UserBean.getUserBean() != null){
-            accountId = UserBean.getUserBean().getUserId();
-        }
+        loading.show();
 
-        TalkCloudApp.InviteUserReq inviteUserReq = TalkCloudApp.InviteUserReq.newBuilder().setGid(groupPosition).setUids(userIds).build();
+        int gid = userGroupBean.getUserGroupId();
+        TalkCloudApp.InviteUserReq inviteUserReq = TalkCloudApp.InviteUserReq.newBuilder().setGid(gid).setUids(userIds).build();
         TalkCloudApp.InviteUserResp inviteUserResp = null;
         try {
             Future<TalkCloudApp.InviteUserResp> future = executor.submit(new Callable<TalkCloudApp.InviteUserResp>() {
@@ -428,7 +435,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
 
             inviteUserResp = future.get();
         } catch (Exception e) {
-
+            //TODO Nothing here
         }
 
         loading.dismiss();
@@ -445,6 +452,19 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
             //添加成功，
             Toast.makeText(GroupCreateActivity.this, R.string.new_group_str_add_member_success, Toast.LENGTH_SHORT).show();
 
+            // 更新当前群成员列表
+            // Updating the Group's UserFriendBeanArrayList
+            ArrayList<UserFriendBean> newAddedFriendsList = new ArrayList<UserFriendBean>();
+            for (TalkCloudApp.UserRecord newAddedFriend : inviteUserResp.getUsrListList()) {
+                UserFriendBean userFriendBean = new UserFriendBean();
+                userFriendBean.setUserFriendId(newAddedFriend.getUid());
+                userFriendBean.setUserFriendName(newAddedFriend.getName());
+
+                newAddedFriendsList.add(userFriendBean);
+            }
+            UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition).setUserFriendBeanArrayList(newAddedFriendsList);
+
+            //状态重置
             for (UserFriendBean userFriendBean: myList) {
                 userFriendBean.setCheck(false);
                 userFriendBean.setInGroup(false);

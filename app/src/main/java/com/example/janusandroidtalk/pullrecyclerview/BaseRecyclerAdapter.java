@@ -116,7 +116,7 @@ public abstract class BaseRecyclerAdapter<T> extends RecyclerView.Adapter<BaseVi
         converted(holder, item,position);
     }
 
-    protected abstract void converted(BaseViewHolder holder, T item,int position);
+    protected abstract void converted(BaseViewHolder holder, T item, int position);
 
     @Override
     public int getItemCount() {

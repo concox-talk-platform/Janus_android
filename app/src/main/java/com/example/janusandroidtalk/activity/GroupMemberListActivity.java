@@ -7,19 +7,11 @@ import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.text.Editable;
-import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.CheckBox;
-import android.widget.CompoundButton;
-import android.widget.EditText;
-import android.widget.Filter;
-import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
@@ -30,17 +22,21 @@ import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
-import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.tools.AppTools;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
 import talk_cloud.TalkCloudGrpc;
+
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
+import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
 
 public class GroupMemberListActivity extends AppCompatActivity{
 
@@ -100,8 +96,8 @@ public class GroupMemberListActivity extends AppCompatActivity{
         menu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(GroupMemberListActivity.this,GroupCreateActivity.class);
-                intent.putExtra("groupPosition",groupPosition);
+                Intent intent = new Intent(GroupMemberListActivity.this, GroupCreateActivity.class);
+                intent.putExtra("groupPosition", groupPosition);
                 intent.putExtra("addFlag",1);
                 startActivityForResult(intent,1000);
             }
@@ -173,62 +169,39 @@ public class GroupMemberListActivity extends AppCompatActivity{
     }
 
     //删除群组成员
-    class GrpcGroupDeleteMemberTask extends AsyncTask<String, Void, TalkCloudApp.CreateGroupResp> {
-        private ManagedChannel channel;
+    // Delete group member thread
+    public void groupDeleteMember(int deletedId) {
+        TalkCloudApp.GrpUserDelReq grpUserDelReq = TalkCloudApp.GrpUserDelReq.newBuilder().setGid(groupPosition).setUid(deletedId).build();
+        TalkCloudApp.GrpUserDelRsp grpUserDelRsp = null;
+        try {
+            Future<TalkCloudApp.GrpUserDelRsp> future = executor.submit(new Callable<TalkCloudApp.GrpUserDelRsp>() {
+                @Override
+                public TalkCloudApp.GrpUserDelRsp call() throws Exception {
+                    return getGrpcConnect().getBlockingStub().removeGrpUser(grpUserDelReq);
+                }
+            });
 
-        private GrpcGroupDeleteMemberTask() {
-            loading.show();
+            grpUserDelRsp = future.get();
+        } catch (Exception e) {
+            //TODO Nothing here
         }
 
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
+        loading.dismiss();
+
+        if (grpUserDelRsp == null) {
+            Toast.makeText(GroupMemberListActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
+            return;
         }
-
-        @Override
-        protected TalkCloudApp.CreateGroupResp doInBackground(String... params) {
-            int accountId = 0;
-            if(UserBean.getUserBean() != null){
-                accountId = UserBean.getUserBean().getUserId();
-            }
-
-            TalkCloudApp.CreateGroupResp replay = null;
-            try {
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.CreateGroupReq regReq = TalkCloudApp.CreateGroupReq.newBuilder().setDeviceIds(params[0]).setGroupName(params[1]).setAccountId(accountId).build();
-                replay = stub.createGroup(regReq);
-                return replay;
-            } catch (Exception e) {
-                return replay;
-            }
-        }
-
-        @Override
-        protected void onPostExecute(TalkCloudApp.CreateGroupResp result) {
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            loading.dismiss();
-
-            if (result == null) {
-                Toast.makeText(GroupMemberListActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
-                return;
-            }
-            //判断result code
-            if (result.getRes().getCode() != 200) {
-                Toast.makeText(GroupMemberListActivity.this, result.getRes().getMsg(), Toast.LENGTH_SHORT).show();
-                return;
-            } else {
-               //Todo 删除成功之后，将本地的数据删除，
-                UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition).getUserFriendBeanArrayList().remove(deletePosition);
-                userGroupBean = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
-                myList = userGroupBean.getUserFriendBeanArrayList();
-                groupListAdapter.notifyDataSetChanged();
-            }
-
+        //判断result code
+        if (grpUserDelRsp.getRes().getCode() != 200) {
+            Toast.makeText(GroupMemberListActivity.this, grpUserDelRsp.getRes().getMsg(), Toast.LENGTH_SHORT).show();
+            return;
+        } else {
+            //Todo 删除成功之后，将本地的数据删除，
+            UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition).getUserFriendBeanArrayList().remove(deletePosition);
+            userGroupBean = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
+            myList = userGroupBean.getUserFriendBeanArrayList();
+            groupListAdapter.notifyDataSetChanged();
         }
     }
 
@@ -240,6 +213,7 @@ public class GroupMemberListActivity extends AppCompatActivity{
                     public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
                         //Todo 调用删除群组成员接口
+                        groupDeleteMember(deleteUserId);
                     }
                 })
                 .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
@@ -256,6 +230,7 @@ public class GroupMemberListActivity extends AppCompatActivity{
        if(resultCode == RESULT_OK && requestCode == 1000){
             userGroupBean = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
             myList = userGroupBean.getUserFriendBeanArrayList();
+            //TODO Do not update UserGroupBean's userFriendBeanArrayList, so that can not update adapter, fix it.
             groupListAdapter.notifyDataSetChanged();
        }
     }
