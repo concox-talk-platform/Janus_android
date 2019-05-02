@@ -2,8 +2,6 @@ package com.example.janusandroidtalk.activity;
 
 import android.app.Dialog;
 import android.content.Intent;
-import android.media.MediaPlayer;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
@@ -21,21 +19,13 @@ import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
-import com.example.janusandroidtalk.tools.AppTools;
+import com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect;
 
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
-import java.util.concurrent.TimeUnit;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudApp;
-import talk_cloud.TalkCloudGrpc;
-
-import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
-import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
 
 public class LoginActivity extends AppCompatActivity {
 
@@ -70,6 +60,8 @@ public class LoginActivity extends AppCompatActivity {
         loading = CustomProgressDialog.createLoadingDialog(this,R.string.recycler_pull_loading);
         loading.setCancelable(true);
         loading.setCanceledOnTouchOutside(false);
+
+        //TODO 初始化grpc连接
 
         textGo.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -128,10 +120,10 @@ public class LoginActivity extends AppCompatActivity {
         TalkCloudApp.AppRegReq appRegReq = TalkCloudApp.AppRegReq.newBuilder().setName(account).setPassword(password).build();
         TalkCloudApp.AppRegRsp appRegRsp = null;
         try {
-            Future<TalkCloudApp.AppRegRsp> future = executor.submit(new Callable<TalkCloudApp.AppRegRsp>() {
+            Future<TalkCloudApp.AppRegRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.AppRegRsp>() {
                 @Override
                 public TalkCloudApp.AppRegRsp call() {
-                    return getGrpcConnect().getBlockingStub().appRegister(appRegReq);
+                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().appRegister(appRegReq);
                 }
             });
 
@@ -172,10 +164,10 @@ public class LoginActivity extends AppCompatActivity {
         TalkCloudApp.LoginReq loginReq = TalkCloudApp.LoginReq.newBuilder().setName(account).setPasswd(password).build();
         TalkCloudApp.LoginRsp loginRsp = null;
         try {
-            Future<TalkCloudApp.LoginRsp> future = executor.submit(new Callable<TalkCloudApp.LoginRsp>() {
+            Future<TalkCloudApp.LoginRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.LoginRsp>() {
                 @Override
                 public TalkCloudApp.LoginRsp call() {
-                    return getGrpcConnect().getBlockingStub().login(loginReq);
+                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().login(loginReq);
                 }
             });
 
@@ -218,18 +210,24 @@ public class LoginActivity extends AppCompatActivity {
             userGroupBean.setUserGroupName(groupRecord.getGroupName());
             userGroupBean.setUserGroupId(groupRecord.getGid());
             ArrayList<UserFriendBean> memberList = new ArrayList<>();
+
+            // Inserting friends into group
             for (TalkCloudApp.UserRecord userRecord: groupRecord.getUsrListList()) {
-                UserFriendBean  userFriendBean1 = new UserFriendBean();
-                userFriendBean1.setUserFriendName(userRecord.getName());
-                userFriendBean1.setUserFriendId(userRecord.getUid());
-                userFriendBean1.setGroupRole(userRecord.getGrpRole());
-                if(loginRsp.getUserInfo().getId() == userRecord.getUid() && userRecord.getGrpRole() == 2){
-                    userGroupBean.setUserGroupRole(2);
-                }else{
-                    userGroupBean.setUserGroupRole(1);
+                UserFriendBean  userFriendBean = new UserFriendBean();
+                userFriendBean.setUserFriendName(userRecord.getName());
+                userFriendBean.setUserFriendId(userRecord.getUid());
+                userFriendBean.setGroupRole(userRecord.getGrpRole());
+//                if(loginRsp.getUserInfo().getId() == userRecord.getUid() && userRecord.getGrpRole() == 2){
+//                    userGroupBean.setUserGroupRole(2);
+//                }else{
+//                    userGroupBean.setUserGroupRole(1);
+//                }
+                //TODO 设置群管理员ID
+                if(groupRecord.getGroupManager() == userRecord.getUid()){
+                    userGroupBean.setGroupManagerId(userFriendBean.getUserFriendId());
                 }
-                userFriendBean1.setOnline(userRecord.getOnline());
-                memberList.add(userFriendBean1);
+                userFriendBean.setOnline(userRecord.getOnline());
+                memberList.add(userFriendBean);
             }
             userGroupBean.setUserFriendBeanArrayList(memberList);
             userGroupBeanArrayList.add(userGroupBean);
@@ -264,6 +262,10 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), R.string.quit_tip, Toast.LENGTH_SHORT).show();
                 exitTime =  System.currentTimeMillis();
             }else{
+                // 关闭线程池
+                // Shutting down newSimpleThreadExecutor
+                GrpcSingleConnect.executor.shutdown();
+
                 finish();
             }
             return false;

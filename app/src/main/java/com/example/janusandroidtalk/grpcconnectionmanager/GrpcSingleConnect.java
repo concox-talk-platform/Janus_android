@@ -10,7 +10,7 @@ import io.grpc.ManagedChannelBuilder;
 import talk_cloud.TalkCloudGrpc;
 
 public class GrpcSingleConnect {
-    private final static GrpcSingleConnect instance = new GrpcSingleConnect();
+    private static GrpcSingleConnect instance = new GrpcSingleConnect();
     private ManagedChannel channel = null;
     private TalkCloudGrpc.TalkCloudBlockingStub blockingStub = null;
 
@@ -33,4 +33,9 @@ public class GrpcSingleConnect {
 
     //TODO Unique thread handles different requests by FIFO
     public static ExecutorService executor = Executors.newSingleThreadExecutor();
+
+    public static void closeGrpcSingleConnect() {
+        executor.shutdown();
+        instance = null;
+    }
 }

@@ -31,6 +31,7 @@ import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
+import com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
 
@@ -43,9 +44,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 import talk_cloud.TalkCloudApp;
-
-import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
-import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
 
 public class GroupCreateActivity extends AppCompatActivity implements MyControlCallBack {
 
@@ -379,10 +377,10 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
         TalkCloudApp.CreateGroupReq createGroupReq = TalkCloudApp.CreateGroupReq.newBuilder().setDeviceIds(userIds).setGroupName(groupName).setAccountId(accountId).build();
         TalkCloudApp.CreateGroupResp createGroupResp = null;
         try {
-            Future<TalkCloudApp.CreateGroupResp> future = executor.submit(new Callable<TalkCloudApp.CreateGroupResp>() {
+            Future<TalkCloudApp.CreateGroupResp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.CreateGroupResp>() {
                 @Override
                 public TalkCloudApp.CreateGroupResp call() throws Exception {
-                    return getGrpcConnect().getBlockingStub().createGroup(createGroupReq);
+                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().createGroup(createGroupReq);
                 }
             });
 
@@ -416,10 +414,10 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
         TalkCloudApp.InviteUserReq inviteUserReq = TalkCloudApp.InviteUserReq.newBuilder().setGid(gid).setUids(userIds).build();
         TalkCloudApp.InviteUserResp inviteUserResp = null;
         try {
-            Future<TalkCloudApp.InviteUserResp> future = executor.submit(new Callable<TalkCloudApp.InviteUserResp>() {
+            Future<TalkCloudApp.InviteUserResp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.InviteUserResp>() {
                 @Override
                 public TalkCloudApp.InviteUserResp call() throws Exception {
-                    return getGrpcConnect().getBlockingStub().inviteUserIntoGroup(inviteUserReq);
+                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().inviteUserIntoGroup(inviteUserReq);
                 }
             });
 

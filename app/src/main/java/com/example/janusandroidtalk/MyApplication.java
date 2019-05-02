@@ -3,9 +3,6 @@ package com.example.janusandroidtalk;
 import android.app.Application;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.widget.Toast;
-
-import com.example.janusandroidtalk.tools.AppFrontBackHelper;
 
 public class MyApplication extends Application {
     private static MyApplication instance;

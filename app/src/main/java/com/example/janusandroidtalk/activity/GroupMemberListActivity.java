@@ -21,6 +21,7 @@ import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
+import com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,9 +29,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 import talk_cloud.TalkCloudApp;
-
-import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
-import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
 
 public class GroupMemberListActivity extends AppCompatActivity{
 
@@ -132,16 +130,24 @@ public class GroupMemberListActivity extends AppCompatActivity{
                 holder = (ViewHolder) convertView.getTag();
             }
 
-            if(userGroupBean.getUserGroupRole() == 2){
-                holder.imageViewDelete.setEnabled(true);
-                holder.imageViewDelete.setImageResource(R.drawable.ic_delete_black_24dp);
-            }else{
+            // Only group manager can delete members, so show difference
+            if(UserBean.getUserBean().getUserId() != userGroupBean.getGroupManagerId()){
                 holder.imageViewDelete.setEnabled(false);
                 holder.imageViewDelete.setImageResource(R.drawable.ic_delete_gray_24dp);
+            }else{
+                holder.imageViewDelete.setEnabled(true);
+                holder.imageViewDelete.setImageResource(R.drawable.ic_delete_black_24dp);
             }
 
             holder.nameTextView.setText(myList.get(position).getUserFriendName());
-            holder.stateTextView.setText(myList.get(position).getUserFriendId() + "");
+            // Show online status
+            if (myList.get(position).getOnline() == 2) {// Online
+                holder.stateTextView.setText(myList.get(position).getUserFriendId() + " 在线");
+            }
+            else {
+                holder.stateTextView.setText(myList.get(position).getUserFriendId() + " 离线");
+            }
+
 
             holder.imageViewDelete.setOnClickListener(new View.OnClickListener(){
                 @Override
@@ -184,14 +190,14 @@ public class GroupMemberListActivity extends AppCompatActivity{
 
     // 删除群组成员
     // Delete group member thread
-    public void groupDeleteMember(int deletedId) {
-        TalkCloudApp.GrpUserDelReq grpUserDelReq = TalkCloudApp.GrpUserDelReq.newBuilder().setGid(groupPosition).setUid(deletedId).build();
+    public void groupDeleteMember(int deleteUserId) {
+        TalkCloudApp.GrpUserDelReq grpUserDelReq = TalkCloudApp.GrpUserDelReq.newBuilder().setGid(groupPosition).setUid(deleteUserId).build();
         TalkCloudApp.GrpUserDelRsp grpUserDelRsp = null;
         try {
-            Future<TalkCloudApp.GrpUserDelRsp> future = executor.submit(new Callable<TalkCloudApp.GrpUserDelRsp>() {
+            Future<TalkCloudApp.GrpUserDelRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.GrpUserDelRsp>() {
                 @Override
                 public TalkCloudApp.GrpUserDelRsp call() throws Exception {
-                    return getGrpcConnect().getBlockingStub().removeGrpUser(grpUserDelReq);
+                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().removeGrpUser(grpUserDelReq);
                 }
             });
 

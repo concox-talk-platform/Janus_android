@@ -28,6 +28,7 @@ import com.example.janusandroidtalk.activity.SearchActivity;
 import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
+import com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect;
 import com.example.janusandroidtalk.pullrecyclerview.BaseRecyclerAdapter;
 import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
@@ -44,9 +45,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.Future;
 
 import talk_cloud.TalkCloudApp;
-
-import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.executor;
-import static com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect.getGrpcConnect;
 
 public class FragmentMine extends Fragment implements MyControlCallBack {
 
@@ -100,7 +98,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
         //第一次进来发起请求
         if (UserBean.getUserBean() != null) {
             mPullRecyclerView.postRefreshing();
-            buildFriendsInfo();
+            updateFriendsInfo();
         }
         //下拉刷新
         mPullRecyclerView.setOnRecyclerRefreshListener(new PullRecyclerView.OnRecyclerRefreshListener() {
@@ -108,7 +106,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
             public void onPullRefresh() {
                 // 下拉刷新事件被触发
                 if (UserBean.getUserBean() != null) {
-                    buildFriendsInfo();
+                    updateFriendsInfo();
                 }
             }
 
@@ -142,6 +140,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
                                 FloatActionController.getInstance().stopMonkServer(getActivity());
                                 JanusControl.closeWebRtc();
                                 JanusControl.closeJanusServer();
+                                GrpcSingleConnect.closeGrpcSingleConnect();
                                 Intent intent = new Intent(getActivity(),LoginActivity.class);
                                 getActivity().startActivity(intent);
                                 getActivity().finish();
@@ -158,15 +157,15 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
         });
     }
 
-    //Initialize friends' info
-    public void buildFriendsInfo() {
+    //Updating friends' info
+    public void updateFriendsInfo() {
         TalkCloudApp.FriendsReq friendsReq = TalkCloudApp.FriendsReq.newBuilder().setUid(UserBean.getUserBean().getUserId()).build();
         TalkCloudApp.FriendsRsp friendsRsp = null;
         try {
-            Future<TalkCloudApp.FriendsRsp> future = executor.submit(new Callable<TalkCloudApp.FriendsRsp>() {
+            Future<TalkCloudApp.FriendsRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.FriendsRsp>() {
                 @Override
                 public TalkCloudApp.FriendsRsp call() {
-                    return getGrpcConnect().getBlockingStub().getFriendList(friendsReq);
+                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().getFriendList(friendsReq);
                 }
             });
 

@@ -19,8 +19,6 @@ import android.widget.Toast;
 import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
-import com.example.janusandroidtalk.fragment.FragmentGroup;
-import com.example.janusandroidtalk.fragment.FragmentMine;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
 import com.example.janusandroidtalk.webrtc.ProxyVideoSink;
