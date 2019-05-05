@@ -28,7 +28,7 @@ import com.example.janusandroidtalk.activity.SearchActivity;
 import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
-import com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect;
+import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 import com.example.janusandroidtalk.pullrecyclerview.BaseRecyclerAdapter;
 import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
@@ -140,7 +140,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
                                 FloatActionController.getInstance().stopMonkServer(getActivity());
                                 JanusControl.closeWebRtc();
                                 JanusControl.closeJanusServer();
-                                GrpcSingleConnect.closeGrpcSingleConnect();
+                                GrpcConnectionManager.closeGrpcConnectionManager();
                                 Intent intent = new Intent(getActivity(),LoginActivity.class);
                                 getActivity().startActivity(intent);
                                 getActivity().finish();
@@ -162,10 +162,10 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
         TalkCloudApp.FriendsReq friendsReq = TalkCloudApp.FriendsReq.newBuilder().setUid(UserBean.getUserBean().getUserId()).build();
         TalkCloudApp.FriendsRsp friendsRsp = null;
         try {
-            Future<TalkCloudApp.FriendsRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.FriendsRsp>() {
+            Future<TalkCloudApp.FriendsRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.FriendsRsp>() {
                 @Override
                 public TalkCloudApp.FriendsRsp call() {
-                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().getFriendList(friendsReq);
+                    return GrpcConnectionManager.getInstance().getBlockingStub().getFriendList(friendsReq);
                 }
             });
 

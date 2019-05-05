@@ -2,7 +2,6 @@ package com.example.janusandroidtalk;
 
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.Fragment;
@@ -15,6 +14,7 @@ import android.widget.Toast;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.fragment.FragmentGroup;
 import com.example.janusandroidtalk.fragment.FragmentMine;
+import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
 import com.example.janusandroidtalk.webrtc.AppRTCAudioManager;
@@ -127,6 +127,7 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
             }else{
                 JanusControl.closeWebRtc();
                 JanusControl.closeJanusServer();
+                GrpcConnectionManager.closeGrpcConnectionManager();
                 FloatActionController.getInstance().stopMonkServer(this);
                 finish();
             }

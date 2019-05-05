@@ -19,7 +19,7 @@ import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
-import com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect;
+import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
@@ -60,8 +60,6 @@ public class LoginActivity extends AppCompatActivity {
         loading = CustomProgressDialog.createLoadingDialog(this,R.string.recycler_pull_loading);
         loading.setCancelable(true);
         loading.setCanceledOnTouchOutside(false);
-
-        //TODO 初始化grpc连接
 
         textGo.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -120,10 +118,10 @@ public class LoginActivity extends AppCompatActivity {
         TalkCloudApp.AppRegReq appRegReq = TalkCloudApp.AppRegReq.newBuilder().setName(account).setPassword(password).build();
         TalkCloudApp.AppRegRsp appRegRsp = null;
         try {
-            Future<TalkCloudApp.AppRegRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.AppRegRsp>() {
+            Future<TalkCloudApp.AppRegRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.AppRegRsp>() {
                 @Override
                 public TalkCloudApp.AppRegRsp call() {
-                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().appRegister(appRegReq);
+                    return GrpcConnectionManager.getInstance().getBlockingStub().appRegister(appRegReq);
                 }
             });
 
@@ -164,10 +162,10 @@ public class LoginActivity extends AppCompatActivity {
         TalkCloudApp.LoginReq loginReq = TalkCloudApp.LoginReq.newBuilder().setName(account).setPasswd(password).build();
         TalkCloudApp.LoginRsp loginRsp = null;
         try {
-            Future<TalkCloudApp.LoginRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.LoginRsp>() {
+            Future<TalkCloudApp.LoginRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.LoginRsp>() {
                 @Override
                 public TalkCloudApp.LoginRsp call() {
-                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().login(loginReq);
+                    return GrpcConnectionManager.getInstance().getBlockingStub().login(loginReq);
                 }
             });
 
@@ -196,6 +194,8 @@ public class LoginActivity extends AppCompatActivity {
         userBean.setUserName(loginRsp.getUserInfo().getUserName());
         userBean.setUserId(loginRsp.getUserInfo().getId());
         userBean.setUserLoginState(true);
+        userBean.setOnline(loginRsp.getUserInfo().getOnline()); // 2 online, 1 offline
+//        System.out.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + loginRsp.getUserInfo().getOnline());
 
         //初始化好友列表
         for (TalkCloudApp.FriendRecord friendRecord: loginRsp.getFriendListList()) {
@@ -216,7 +216,7 @@ public class LoginActivity extends AppCompatActivity {
                 UserFriendBean  userFriendBean = new UserFriendBean();
                 userFriendBean.setUserFriendName(userRecord.getName());
                 userFriendBean.setUserFriendId(userRecord.getUid());
-                userFriendBean.setGroupRole(userRecord.getGrpRole());
+//                userFriendBean.setGroupRole(userRecord.getGrpRole());
 //                if(loginRsp.getUserInfo().getId() == userRecord.getUid() && userRecord.getGrpRole() == 2){
 //                    userGroupBean.setUserGroupRole(2);
 //                }else{
@@ -262,9 +262,9 @@ public class LoginActivity extends AppCompatActivity {
                 Toast.makeText(getApplicationContext(), R.string.quit_tip, Toast.LENGTH_SHORT).show();
                 exitTime =  System.currentTimeMillis();
             }else{
-                // 关闭线程池
-                // Shutting down newSimpleThreadExecutor
-                GrpcSingleConnect.executor.shutdown();
+                // 关闭Grpc连接
+                // Shutting down GrpcConnectionManager
+                GrpcConnectionManager.closeGrpcConnectionManager();
 
                 finish();
             }

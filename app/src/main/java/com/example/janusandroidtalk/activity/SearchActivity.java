@@ -21,7 +21,7 @@ import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
-import com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect;
+import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -130,10 +130,10 @@ public class SearchActivity extends AppCompatActivity {
         TalkCloudApp.GrpSearchReq grpSearchReq = TalkCloudApp.GrpSearchReq.newBuilder().setUid(id).setTarget(target).build();
         TalkCloudApp.GroupListRsp groupListRsp = null;
         try {
-            Future<TalkCloudApp.GroupListRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.GroupListRsp>() {
+            Future<TalkCloudApp.GroupListRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.GroupListRsp>() {
                 @Override
                 public TalkCloudApp.GroupListRsp call() throws Exception {
-                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().searchGroup(grpSearchReq);
+                    return GrpcConnectionManager.getInstance().getBlockingStub().searchGroup(grpSearchReq);
                 }
             });
 
@@ -184,10 +184,10 @@ public class SearchActivity extends AppCompatActivity {
         TalkCloudApp.UserSearchReq userSearchReq = TalkCloudApp.UserSearchReq.newBuilder().setUid(id).setTarget(target).build();
         TalkCloudApp.UserSearchRsp userSearchRsp = null;
         try {
-            Future<TalkCloudApp.UserSearchRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.UserSearchRsp>() {
+            Future<TalkCloudApp.UserSearchRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.UserSearchRsp>() {
                 @Override
                 public TalkCloudApp.UserSearchRsp call() throws Exception {
-                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().searchUserByKey(userSearchReq);
+                    return GrpcConnectionManager.getInstance().getBlockingStub().searchUserByKey(userSearchReq);
                 }
             });
 
@@ -240,10 +240,10 @@ public class SearchActivity extends AppCompatActivity {
         TalkCloudApp.GrpUserAddReq grpUserAddReq = TalkCloudApp.GrpUserAddReq.newBuilder().setUid(uid).setGid(gid).build();
         TalkCloudApp.GrpUserAddRsp grpUserAddRsp = null;
         try {
-            Future<TalkCloudApp.GrpUserAddRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.GrpUserAddRsp>() {
+            Future<TalkCloudApp.GrpUserAddRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.GrpUserAddRsp>() {
                 @Override
                 public TalkCloudApp.GrpUserAddRsp call() throws Exception {
-                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().joinGroup(grpUserAddReq);
+                    return GrpcConnectionManager.getInstance().getBlockingStub().joinGroup(grpUserAddReq);
                 }
             });
 
@@ -278,10 +278,10 @@ public class SearchActivity extends AppCompatActivity {
         TalkCloudApp.FriendNewReq friendNewReq = TalkCloudApp.FriendNewReq.newBuilder().setUid(uid).setFuid(friendId).build();
         TalkCloudApp.FriendNewRsp friendNewRsp = null;
         try {
-            Future<TalkCloudApp.FriendNewRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.FriendNewRsp>() {
+            Future<TalkCloudApp.FriendNewRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.FriendNewRsp>() {
                 @Override
                 public TalkCloudApp.FriendNewRsp call() throws Exception {
-                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().addFriend(friendNewReq);
+                    return GrpcConnectionManager.getInstance().getBlockingStub().addFriend(friendNewReq);
                 }
             });
 

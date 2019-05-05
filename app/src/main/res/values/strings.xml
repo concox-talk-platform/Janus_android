@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">几米测试</string>
+    <string name="app_name">几米对讲Alpha</string>
     <string name="title_group">群组</string>
     <string name="title_Mine">我的好友</string>
     <string name="title_quit">退出</string>

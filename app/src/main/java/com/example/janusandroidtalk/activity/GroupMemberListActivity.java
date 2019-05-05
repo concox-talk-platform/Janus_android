@@ -21,7 +21,7 @@ import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
-import com.example.janusandroidtalk.grpcconnectionmanager.GrpcSingleConnect;
+import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -191,13 +191,14 @@ public class GroupMemberListActivity extends AppCompatActivity{
     // 删除群组成员
     // Delete group member thread
     public void groupDeleteMember(int deleteUserId) {
-        TalkCloudApp.GrpUserDelReq grpUserDelReq = TalkCloudApp.GrpUserDelReq.newBuilder().setGid(groupPosition).setUid(deleteUserId).build();
+        int gid = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition).getUserGroupId();
+        TalkCloudApp.GrpUserDelReq grpUserDelReq = TalkCloudApp.GrpUserDelReq.newBuilder().setGid(gid).setUid(deleteUserId).build();
         TalkCloudApp.GrpUserDelRsp grpUserDelRsp = null;
         try {
-            Future<TalkCloudApp.GrpUserDelRsp> future = GrpcSingleConnect.executor.submit(new Callable<TalkCloudApp.GrpUserDelRsp>() {
+            Future<TalkCloudApp.GrpUserDelRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.GrpUserDelRsp>() {
                 @Override
                 public TalkCloudApp.GrpUserDelRsp call() throws Exception {
-                    return GrpcSingleConnect.getGrpcConnect().getBlockingStub().removeGrpUser(grpUserDelReq);
+                    return GrpcConnectionManager.getInstance().getBlockingStub().removeGrpUser(grpUserDelReq);
                 }
             });
 

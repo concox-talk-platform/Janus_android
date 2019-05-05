@@ -17,7 +17,7 @@ public class AppTools {
     //public static String host = "172.16.0.74";//内网
 
 
-    public static int port = 9000;
+    public static int port = 9001;
 
     /*
      * 将时间戳转换为时间

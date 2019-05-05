@@ -10,6 +10,7 @@ public class UserBean implements Serializable {
     private boolean userLoginState;
     private String nickName;
     private String iMei;
+    private int online; // 2 online, 1 offline
     private ArrayList<UserFriendBean> userFriendBeanArrayList;
     private ArrayList<UserGroupBean> userGroupBeanArrayList;
 
@@ -89,4 +90,11 @@ public class UserBean implements Serializable {
         userBeanObj = null;
     }
 
+    public int isOnline() {
+        return online;
+    }
+
+    public void setOnline(int online) {
+        this.online = online;
+    }
 }

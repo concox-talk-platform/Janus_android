@@ -9,6 +9,8 @@ public class UserGroupBean implements Serializable {
     private ArrayList<UserFriendBean> userFriendBeanArrayList;
 //    private int userGroupRole;//群主为2,其他参与者为1
 
+    private int OnlineMembersCount;
+
     // Group manager
     private int groupManagerId;
 
@@ -62,5 +64,29 @@ public class UserGroupBean implements Serializable {
 
     public int getGroupManagerId() {
         return groupManagerId;
+    }
+
+    public int getTotalMembersCount() {
+        return userFriendBeanArrayList.size();
+    }
+
+    public int getOnlineMembersCountLocal() {
+        int count = 0;
+
+        for (UserFriendBean userFriendBean : userFriendBeanArrayList) {
+            if (userFriendBean.getOnline() == 2) {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    public int getOnlineMembersCount() {
+        return this.OnlineMembersCount;
+    }
+
+    public void  setOnlineMembersCount(int onlineMembersCount) {
+        this.OnlineMembersCount = onlineMembersCount;
     }
 }
