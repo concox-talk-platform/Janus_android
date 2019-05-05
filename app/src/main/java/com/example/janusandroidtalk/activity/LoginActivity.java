@@ -113,6 +113,12 @@ public class LoginActivity extends AppCompatActivity {
                 }
             }
         });
+
+        //TODO
+        if ((getIntent().getFlags() & Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT) != 0) {
+            finish();
+            return;
+        }
     }
 
     public void registerTask(String account, String password) {
