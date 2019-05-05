@@ -49,7 +49,15 @@ public class GrpcConnectionManager {
     }
 
     private static class SingletonHolder {
-        private static final GrpcConnectionManager INSTANCE = new GrpcConnectionManager();
+        private static GrpcConnectionManager INSTANCE;
+
+        private static void init() {
+            INSTANCE = new GrpcConnectionManager();
+        }
+    }
+
+    public static void initGrpcConnectionManager() {
+        SingletonHolder.init();
     }
 
     public static void closeGrpcConnectionManager() {

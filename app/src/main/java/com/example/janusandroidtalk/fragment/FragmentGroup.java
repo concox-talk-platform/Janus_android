@@ -8,6 +8,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -20,6 +21,7 @@ import android.widget.Toast;
 
 import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
+import com.example.janusandroidtalk.activity.GroupActivity;
 import com.example.janusandroidtalk.activity.GroupCreateActivity;
 import com.example.janusandroidtalk.activity.GroupMemberListActivity;
 import com.example.janusandroidtalk.activity.SearchActivity;
@@ -210,9 +212,6 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
 
         //保存group信息
         if (UserBean.getUserBean() != null) {
-
-            System.out.println("FFFFFFFFFFFFFFFFFFFFFFFFF Come here ");
-
             UserBean.getUserBean().setUserGroupBeanArrayList(userGroupBeanArrayList);
         }
 
@@ -240,25 +239,33 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             String onlineState = "(" + data.getOnlineMembersCountLocal() + "/" + data.getTotalMembersCount() + ")";
             holder.setText(R.id.fragment_group_list_item_name, data.getUserGroupName() + onlineState);
             holder.setText(R.id.fragment_group_list_item_state, data.getUserGroupId() + "");
-            ImageView imageView = holder.getView(R.id.fragment_group_list_item_lock);
+            ImageView imageView_im = holder.getView(R.id.fragment_group_list_item_im);
+            ImageView imageView_lock = holder.getView(R.id.fragment_group_list_item_lock);
             LinearLayout linearLayout = holder.getView(R.id.fragment_group_list_item);
 
+            imageView_im.setImageResource(R.drawable.ic_chat_black_24dp);
+            // TODO Set imageView_im clickListener
+
             if (data.getUserGroupId() == MyApplication.getDefaultGroupId()) {
-                imageView.setImageResource(R.drawable.ic_lock_outline_black_24dp);
+                imageView_lock.setImageResource(R.drawable.ic_lock_outline_black_24dp);
             } else {
-                imageView.setImageResource(R.drawable.ic_lock_open_black_24dp);
+                imageView_lock.setImageResource(R.drawable.ic_lock_open_black_24dp);
             }
 
             linearLayout.setOnClickListener(new View.OnClickListener(){
                 @Override
                 public void onClick(View v) {
-                    Intent intent = new Intent(getContext(), GroupMemberListActivity.class);
-                    intent.putExtra("groupPosition", position);
-                    startActivity(intent);
+//                    Intent intent = new Intent(getContext(), GroupMemberListActivity.class);
+//                    intent.putExtra("groupPosition", position);
+//                    startActivity(intent);
+
+                    Intent testIntent = new Intent(getContext(), GroupActivity.class);
+                    testIntent.putExtra("groupPosition", position);
+                    startActivity(testIntent);
                 }
             });
 
-            imageView.setOnClickListener(new View.OnClickListener() {
+            imageView_lock.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     final AlertDialog dialog = new AlertDialog.Builder(context)

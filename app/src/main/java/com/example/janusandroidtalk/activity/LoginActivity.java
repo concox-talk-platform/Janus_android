@@ -52,6 +52,7 @@ public class LoginActivity extends AppCompatActivity {
         textGo = (TextView) findViewById(R.id.login_go_register);
         toolbarTitle = (TextView) findViewById(R.id.login_title);
 
+        GrpcConnectionManager.initGrpcConnectionManager();
 
         if(!TextUtils.isEmpty(MyApplication.getUserName()) && !TextUtils.isEmpty(MyApplication.getPassword()))
         editAccount.setText(MyApplication.getUserName());

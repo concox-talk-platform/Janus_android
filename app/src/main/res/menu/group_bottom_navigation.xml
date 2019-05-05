@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/bottom_im"
+        android:icon="@drawable/ic_chat_black_24dp"
+        android:title="@string/group_im_button" />
+
+    <item
+        android:id="@+id/bottom_group_member"
+        android:icon="@drawable/ic_group_member_black_24dp"
+        android:title="@string/group_member_button" />
+
+    <item
+        android:id="@+id/bottom_talk_history"
+        android:icon="@drawable/ic_talk_history_black_24dp"
+        android:title="@string/group_talk_history_button" />
+</menu>

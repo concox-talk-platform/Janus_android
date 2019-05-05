@@ -71,5 +71,8 @@
     <!--groupMemberList-->
     <string name="group_member_list_title_menu">添加成员</string>
     <string name="group_member_delete_member_tips">确定删除该成员吗?</string>
+    <string name="group_im_button">即时通信</string>
+    <string name="group_member_button">群成员</string>
+    <string name="group_talk_history_button">历史对讲</string>
 
 </resources>
