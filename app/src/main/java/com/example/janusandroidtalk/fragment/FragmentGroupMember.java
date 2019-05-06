@@ -18,16 +18,13 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.janusandroidtalk.R;
-import com.example.janusandroidtalk.activity.GroupActivity;
 import com.example.janusandroidtalk.activity.GroupCreateActivity;
-import com.example.janusandroidtalk.activity.GroupMemberListActivity;
 import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
-import com.example.janusandroidtalk.pullrecyclerview.layoutmanager.XLinearLayoutManager;
 
 import java.util.ArrayList;
 import java.util.List;

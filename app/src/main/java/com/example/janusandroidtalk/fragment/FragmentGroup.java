@@ -8,7 +8,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
-import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -23,7 +22,6 @@ import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.activity.GroupActivity;
 import com.example.janusandroidtalk.activity.GroupCreateActivity;
-import com.example.janusandroidtalk.activity.GroupMemberListActivity;
 import com.example.janusandroidtalk.activity.SearchActivity;
 import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
@@ -31,6 +29,7 @@ import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.floatwindow.permission.FloatPermissionManager;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
+import com.example.janusandroidtalk.im.activity.GroupChatActivity;
 import com.example.janusandroidtalk.pullrecyclerview.BaseRecyclerAdapter;
 import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
@@ -195,10 +194,6 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                 userFriendBean.setUserFriendId(userRecord.getUid());
                 userFriendBean.setGroupRole(userRecord.getGrpRole());
                 userFriendBean.setOnline(userRecord.getOnline());
-//                if (UserBean.getUserBean().getUserId() == userFriendBean.getUserFriendId()) {
-//                    System.out.println("BBBBBBBBBBBBBBBBBBBBBBB " + userRecord.getOnline());
-//                }
-                //TODO 设置群管理员ID
                 if(groupRecord.getGroupManager() == userRecord.getUid()){
                     userGroupBean.setGroupManagerId(userFriendBean.getUserFriendId());
                 }
@@ -245,6 +240,15 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
 
             imageView_im.setImageResource(R.drawable.ic_chat_black_24dp);
             // TODO Set imageView_im clickListener
+            imageView_im.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent intent = new Intent(getActivity(), GroupChatActivity.class);
+                    intent.putExtra("usergroupid",data.getUserGroupId());
+                    intent.putExtra("usergroupname",data.getUserGroupName());
+                    startActivity(intent);
+                }
+            });
 
             if (data.getUserGroupId() == MyApplication.getDefaultGroupId()) {
                 imageView_lock.setImageResource(R.drawable.ic_lock_outline_black_24dp);
@@ -255,13 +259,9 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             linearLayout.setOnClickListener(new View.OnClickListener(){
                 @Override
                 public void onClick(View v) {
-//                    Intent intent = new Intent(getContext(), GroupMemberListActivity.class);
-//                    intent.putExtra("groupPosition", position);
-//                    startActivity(intent);
-
-                    Intent testIntent = new Intent(getContext(), GroupActivity.class);
-                    testIntent.putExtra("groupPosition", position);
-                    startActivity(testIntent);
+                    Intent intent = new Intent(getContext(), GroupActivity.class);
+                    intent.putExtra("groupPosition", position);
+                    startActivity(intent);
                 }
             });
 

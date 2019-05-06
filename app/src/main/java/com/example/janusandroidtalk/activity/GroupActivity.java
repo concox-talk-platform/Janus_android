@@ -9,7 +9,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.view.MenuItem;
 
 import com.example.janusandroidtalk.R;
-import com.example.janusandroidtalk.fragment.FragmentGroupInstantMessage;
 import com.example.janusandroidtalk.fragment.FragmentGroupMember;
 import com.example.janusandroidtalk.fragment.FragmentGroupTalkHistory;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
@@ -20,7 +19,6 @@ import org.webrtc.MediaStream;
 public class GroupActivity extends AppCompatActivity implements MyControlCallBack {
     //创建fragment变量
     private FragmentGroupMember fragmentGroupMember;
-    private FragmentGroupInstantMessage fragmentGroupInstantMessage;
     private FragmentGroupTalkHistory fragmentGroupTalkHistory;
 
     //当前容器中的fragment
@@ -41,12 +39,6 @@ public class GroupActivity extends AppCompatActivity implements MyControlCallBac
     // Loading different fragment page with different layout
     private void changePageFragment(int id) {
         switch (id) {
-            case R.id.bottom_im:
-                if (fragmentGroupInstantMessage == null){
-                    fragmentGroupInstantMessage = fragmentGroupInstantMessage.newInstance();
-                }
-                switchFragment(fragment_now, fragmentGroupInstantMessage);
-                break;
             case R.id.bottom_group_member:
                 if (fragmentGroupMember == null){
                     fragmentGroupMember = fragmentGroupMember.newInstance();
