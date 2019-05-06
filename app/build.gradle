@@ -72,4 +72,16 @@ dependencies {
     implementation 'io.grpc:grpc-stub:1.19.0'
     implementation 'javax.annotation:javax.annotation-api:1.2'
     implementation 'org.webrtc:google-webrtc:1.0.27485'
+
+    implementation 'com.github.LuckSiege.PictureSelector:picture_library:v2.2.3'
+    compile 'pub.devrel:easypermissions:0.4.0'
+    implementation project(':messagelist')
+    compile 'com.squareup.okhttp3:okhttp:3.6.0'
+}
+
+allprojects {
+    repositories {
+        jcenter()
+        maven { url 'https://jitpack.io' }
+    }
 }

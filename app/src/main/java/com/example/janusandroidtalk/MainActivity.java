@@ -1,5 +1,6 @@
 package com.example.janusandroidtalk;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -14,6 +15,7 @@ import android.widget.Toast;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.fragment.FragmentGroup;
 import com.example.janusandroidtalk.fragment.FragmentMine;
+import com.example.janusandroidtalk.gps.LocationService;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
@@ -71,6 +73,9 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
         // 进行webSocket连接
 //        janusControl = new JanusControl(MainActivity.this,MyApplication.getUserName(),MyApplication.getUserId(),MyApplication.getDefaultGroupId());
 //        janusControl.Start();
+        //启动LocationService
+        Intent intent = new Intent(this, LocationService.class);
+        startService(intent);
     }
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener

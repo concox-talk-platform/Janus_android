@@ -1,8 +1,12 @@
 package com.example.janusandroidtalk.activity;
 
+import android.Manifest;
 import android.app.Dialog;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.KeyEvent;
@@ -119,6 +123,7 @@ public class LoginActivity extends AppCompatActivity {
             finish();
             return;
         }
+        applyPermission();
     }
 
     public void registerTask(String account, String password) {
@@ -280,4 +285,32 @@ public class LoginActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
+    /**
+     * 申请权限
+     */
+    private void applyPermission(){
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            }else {
+                requestPermissions(new String[]{Manifest.permission
+                        .ACCESS_FINE_LOCATION}, 2);
+            }
+
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+            }else {
+                requestPermissions(new String[]{Manifest.permission
+                        .READ_PHONE_STATE}, 3);
+            }
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            }else {
+                requestPermissions(new String[]{Manifest.permission
+                        .ACCESS_COARSE_LOCATION}, 4);
+            }
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            }else {
+                requestPermissions(new String[]{Manifest.permission
+                        .RECORD_AUDIO}, 5);
+            }
+        }
+    }
 }

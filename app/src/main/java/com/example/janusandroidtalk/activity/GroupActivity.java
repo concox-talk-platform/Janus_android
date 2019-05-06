@@ -42,10 +42,10 @@ public class GroupActivity extends AppCompatActivity implements MyControlCallBac
     private void changePageFragment(int id) {
         switch (id) {
             case R.id.bottom_im:
-//                if (fragmentGroupInstantMessage == null){
-//                    fragmentGroupInstantMessage = fragmentGroupInstantMessage.newInstance();
-//                }
-//                switchFragment(fragment_now, fragmentGroupInstantMessage);
+                if (fragmentGroupInstantMessage == null){
+                    fragmentGroupInstantMessage = fragmentGroupInstantMessage.newInstance();
+                }
+                switchFragment(fragment_now, fragmentGroupInstantMessage);
                 break;
             case R.id.bottom_group_member:
                 if (fragmentGroupMember == null){
