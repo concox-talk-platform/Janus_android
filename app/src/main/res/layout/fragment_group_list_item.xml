@@ -63,6 +63,7 @@
                 android:id="@+id/fragment_group_list_item_im"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:layout_marginRight="10dp"
                 android:focusable="false"
                 android:src="@drawable/ic_chat_black_24dp" />
 

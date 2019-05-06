@@ -239,7 +239,6 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             LinearLayout linearLayout = holder.getView(R.id.fragment_group_list_item);
 
             imageView_im.setImageResource(R.drawable.ic_chat_black_24dp);
-            // TODO Set imageView_im clickListener
             imageView_im.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {

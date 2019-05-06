@@ -118,7 +118,7 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
 
-        //TODO
+        // Fix double-check-needed, but don't know why
         if ((getIntent().getFlags() & Intent.FLAG_ACTIVITY_BROUGHT_TO_FRONT) != 0) {
             finish();
             return;
@@ -207,7 +207,6 @@ public class LoginActivity extends AppCompatActivity {
         userBean.setUserId(loginRsp.getUserInfo().getId());
         userBean.setUserLoginState(true);
         userBean.setOnline(loginRsp.getUserInfo().getOnline()); // 2 online, 1 offline
-//        System.out.println("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" + loginRsp.getUserInfo().getOnline());
 
         //初始化好友列表
         for (TalkCloudApp.FriendRecord friendRecord: loginRsp.getFriendListList()) {
@@ -228,17 +227,11 @@ public class LoginActivity extends AppCompatActivity {
                 UserFriendBean  userFriendBean = new UserFriendBean();
                 userFriendBean.setUserFriendName(userRecord.getName());
                 userFriendBean.setUserFriendId(userRecord.getUid());
-//                userFriendBean.setGroupRole(userRecord.getGrpRole());
-//                if(loginRsp.getUserInfo().getId() == userRecord.getUid() && userRecord.getGrpRole() == 2){
-//                    userGroupBean.setUserGroupRole(2);
-//                }else{
-//                    userGroupBean.setUserGroupRole(1);
-//                }
-                //TODO 设置群管理员ID
+                userFriendBean.setOnline(userRecord.getOnline());
                 if(groupRecord.getGroupManager() == userRecord.getUid()){
                     userGroupBean.setGroupManagerId(userFriendBean.getUserFriendId());
                 }
-                userFriendBean.setOnline(userRecord.getOnline());
+
                 memberList.add(userFriendBean);
             }
             userGroupBean.setUserFriendBeanArrayList(memberList);

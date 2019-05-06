@@ -2,6 +2,7 @@ package com.example.janusandroidtalk.fragment;
 
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
@@ -11,12 +12,12 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.BaseAdapter;
 import android.widget.ImageView;
-import android.widget.ListView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.janusandroidtalk.MainActivity;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.activity.GroupCreateActivity;
 import com.example.janusandroidtalk.bean.UserBean;
@@ -24,7 +25,10 @@ import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
+import com.example.janusandroidtalk.pullrecyclerview.BaseRecyclerAdapter;
+import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
+import com.example.janusandroidtalk.pullrecyclerview.layoutmanager.XLinearLayoutManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,22 +42,20 @@ import static android.app.Activity.RESULT_OK;
 
 public class FragmentGroupMember extends Fragment{
     private Dialog loading;
+    private ImageView toolbarBack;
     private TextView setting;
-
-    private List<UserFriendBean> myList = new ArrayList<>();
-    private ListView listView;
     private TextView title;
 
     // Pulling down for refresh
     private PullRecyclerView mPullRecyclerView;
 
-    // Layout adapter
+    // group member list adapter
     private GroupMemberListAdapter groupMemberListAdapter;
 
     private int groupPosition = 0;
     private int deleteMemberPosition = 0;
-
-    private UserGroupBean userGroupBean = null;
+    private UserGroupBean currentGroup = null;
+    private List<UserFriendBean> groupMemberList = new ArrayList<>();
 
     public static FragmentGroupMember newInstance() {
         FragmentGroupMember fragmentGroupMember = new FragmentGroupMember();
@@ -67,24 +69,23 @@ public class FragmentGroupMember extends Fragment{
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fagment_group_member, container, false);
+        return inflater.inflate(R.layout.fragment_group_member_list, container, false);
     }
 
     @Override
     public void onActivityCreated(@Nullable Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
 
-        setting = (TextView) getActivity().findViewById(R.id.group_member_list_menu2);
-        mPullRecyclerView = getActivity().findViewById(R.id.group_list);
-        title = (TextView) getActivity().findViewById(R.id.group_member_list_title2);
+        toolbarBack = (ImageView) getActivity().findViewById(R.id.fragment_group_member_list_back);
+        setting = (TextView) getActivity().findViewById(R.id.fragment_group_member_list_menu);
+        title = (TextView) getActivity().findViewById(R.id.fragment_group_member_list_title);
         groupPosition = getActivity().getIntent().getIntExtra("groupPosition",0);
-        listView = (ListView) getActivity().findViewById(R.id.group_member_list_view2);
 
         //赋值用户好友列表
         if (UserBean.getUserBean() != null) {
-            userGroupBean = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
-            myList = userGroupBean.getUserFriendBeanArrayList();
-            title.setText(userGroupBean.getUserGroupName());
+            currentGroup = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
+            groupMemberList = currentGroup.getUserFriendBeanArrayList();
+            title.setText(currentGroup.getUserGroupName());
         }
 
         //网络请求加载框
@@ -92,9 +93,36 @@ public class FragmentGroupMember extends Fragment{
         loading.setCancelable(true);
         loading.setCanceledOnTouchOutside(false);
 
-        groupMemberListAdapter = new GroupMemberListAdapter();
-        listView.setAdapter(groupMemberListAdapter);
-        listView.setTextFilterEnabled(true);
+        mPullRecyclerView = getActivity().findViewById(R.id.fragment_group_member_list_view);
+        mPullRecyclerView.setLayoutManager(new XLinearLayoutManager(getActivity()));     // 设置LayoutManager
+        mPullRecyclerView.setColorSchemeResources(R.color.colorMain);                    // 设置下拉刷新的旋转圆圈的颜色
+        groupMemberListAdapter = new GroupMemberListAdapter(getActivity(), R.layout.activity_group_member_list_item, groupMemberList);
+        mPullRecyclerView.setAdapter(groupMemberListAdapter);
+
+        //第一次进来发起请求
+        if (UserBean.getUserBean() != null) {
+            mPullRecyclerView.postRefreshing();
+//            updateGroupMemberList();
+            groupMemberList = currentGroup.getUserFriendBeanArrayList();
+            mPullRecyclerView.stopRefresh();
+        }
+
+        mPullRecyclerView.setOnRecyclerRefreshListener(new PullRecyclerView.OnRecyclerRefreshListener() {
+            @Override
+            public void onPullRefresh() {
+                // 下拉刷新事件被触发
+                if (UserBean.getUserBean() != null) {
+//                    updateGroupMemberList();
+                    groupMemberList = currentGroup.getUserFriendBeanArrayList();
+                    mPullRecyclerView.stopRefresh();
+                }
+            }
+
+            @Override
+            public void onLoadMore() {
+                // 上拉加载更多事件被触发
+            }
+        });
 
         //进入groupcreateActivity 进行添加成员进群
         setting.setOnClickListener(new View.OnClickListener() {
@@ -106,77 +134,56 @@ public class FragmentGroupMember extends Fragment{
                 startActivityForResult(intent,1000);
             }
         });
+
+        toolbarBack.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(getContext(), MainActivity.class);
+                startActivity(intent);
+            }
+        });
     }
 
-    //群组列表adapter
-    class GroupMemberListAdapter extends BaseAdapter {
+    class GroupMemberListAdapter extends BaseRecyclerAdapter {
+        private Context context;
 
-        //总行数
-        @Override
-        public int getCount() {
-            return myList.size();
+        public GroupMemberListAdapter (Context context, int layoutResId, List<UserFriendBean> memberList) {
+            super(context, layoutResId, memberList);
+            this.context = context;
         }
 
         @Override
-        public Object getItem(int position) {
-            return null;
-        }
+        protected void converted(BaseViewHolder holder, Object item, int position) {
+            final UserFriendBean data = currentGroup.getUserFriendBeanArrayList().get(position);
 
-        @Override
-        public long getItemId(int position) {
-            return 0;
-        }
+            ImageView imageView_portrait = holder.getView(R.id.group_member_list_item_image);       // Portrait
+            holder.setText(R.id.group_member_list_item_name, data.getUserFriendName() + "");  // Name
+            holder.setText(R.id.group_member_list_item_state, data.getUserFriendId() + "");   // ID
+            ImageView imageView_deleter = holder.getView(R.id.group_member_list_item_delete);       // Deleter
 
-        @Override
-        public View getView(final int position, View convertView, ViewGroup parent) {
-            GroupMemberListAdapter.ViewHolder holder = null;
-            if (convertView == null) {
-                convertView = LayoutInflater.from(getActivity()).inflate(R.layout.activity_group_member_list_item, parent, false);
-                holder = new GroupMemberListAdapter.ViewHolder();
-                holder.imageView = (ImageView) convertView.findViewById(R.id.group_member_list_item_image);
-                holder.nameTextView = (TextView) convertView.findViewById(R.id.group_member_list_item_name);
-                holder.stateTextView = (TextView) convertView.findViewById(R.id.group_member_list_item_state);
-                holder.imageViewDelete = (ImageView) convertView.findViewById(R.id.group_member_list_item_delete);
-                convertView.setTag(holder);
+//            LinearLayout linearLayout = holder.getView(R.layout.activity_group_member_list_item);   // TODO Add onClickListener later
+
+            if (data.getOnline() == 2) {
+                imageView_portrait.setImageResource(R.drawable.ic_group_member_portrait_black_24dp);
             } else {
-                holder = (GroupMemberListAdapter.ViewHolder) convertView.getTag();
+                imageView_portrait.setImageResource(R.drawable.ic_group_member_portrait_gray_24dp);
             }
 
-            // Only group manager can delete members, so show difference
-            if(UserBean.getUserBean().getUserId() != userGroupBean.getGroupManagerId()){
-                holder.imageViewDelete.setEnabled(false);
-                holder.imageViewDelete.setImageResource(R.drawable.ic_delete_gray_24dp);
-            }else{
-                holder.imageViewDelete.setEnabled(true);
-                holder.imageViewDelete.setImageResource(R.drawable.ic_delete_black_24dp);
+            if (currentGroup.getGroupManagerId() == UserBean.getUserBean().getUserId()) {
+                imageView_deleter.setEnabled(true);
+                imageView_deleter.setImageResource(R.drawable.ic_delete_black_24dp);
+            } else {
+                imageView_deleter.setEnabled(false);
+                imageView_deleter.setImageResource(R.drawable.ic_delete_gray_24dp);
             }
 
-            holder.nameTextView.setText(myList.get(position).getUserFriendName());
-            // Show online status
-            if (myList.get(position).getOnline() == 2) {// Online
-                holder.stateTextView.setText(myList.get(position).getUserFriendId() + " 在线");
-            }
-            else {
-                holder.stateTextView.setText(myList.get(position).getUserFriendId() + " 离线");
-            }
-
-            //TODO Trouble here
-            holder.imageViewDelete.setOnClickListener(new View.OnClickListener(){
+            imageView_deleter.setOnClickListener(new View.OnClickListener(){
                 @Override
                 public void onClick(View v) {
                     deleteMemberPosition = position;
-                    deleteGroupMember(myList.get(position).getUserFriendId());
+                    deleteGroupMember(groupMemberList.get(position).getUserFriendId());
                 }
             });
-
-            return convertView;
-        }
-
-        class ViewHolder {
-            ImageView imageView;
-            TextView nameTextView;
-            TextView stateTextView;
-            ImageView imageViewDelete;
         }
     }
 
@@ -232,8 +239,8 @@ public class FragmentGroupMember extends Fragment{
         } else {
             //Todo 删除成功之后，将本地的数据删除，
             UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition).getUserFriendBeanArrayList().remove(deleteMemberPosition);
-            userGroupBean = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
-            myList = userGroupBean.getUserFriendBeanArrayList();
+            currentGroup = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
+            groupMemberList = currentGroup.getUserFriendBeanArrayList();
             groupMemberListAdapter.notifyDataSetChanged();
         }
     }
@@ -241,8 +248,8 @@ public class FragmentGroupMember extends Fragment{
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(resultCode == RESULT_OK && requestCode == 1000){
-            userGroupBean = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
-            myList = userGroupBean.getUserFriendBeanArrayList();
+            currentGroup = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
+            groupMemberList = currentGroup.getUserFriendBeanArrayList();
             groupMemberListAdapter.notifyDataSetChanged();
         }
     }
