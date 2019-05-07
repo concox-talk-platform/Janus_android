@@ -43,16 +43,16 @@ import org.webrtc.MediaStream;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 import talk_cloud.TalkCloudApp;
+
+import static android.app.Activity.RESULT_OK;
 
 public class FragmentGroup extends Fragment implements MyControlCallBack{
 
     private PullRecyclerView mPullRecyclerView;
-    private List<UserGroupBean> myList = new ArrayList<>();
-    private GroupListAdapter mAdapter;
+    private ArrayList<UserGroupBean> myGroupsList = new ArrayList<>();
+    private GroupListAdapter mGroupListAdapter;
 
     private LinearLayout searchView;
 
@@ -97,11 +97,11 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
         if (UserBean.getUserBean() != null && UserBean.getUserBean().getUserGroupBeanArrayList() != null) {
             //mPullRecyclerView.postRefreshing();
             //new GrpcGetGroupListTask().execute(UserBean.getUserBean().getUserId()+"");
-            myList = UserBean.getUserBean().getUserGroupBeanArrayList();
+            myGroupsList = UserBean.getUserBean().getUserGroupBeanArrayList();
         }
 
-        mAdapter = new GroupListAdapter(getActivity(), R.layout.fragment_group_list_item, myList);
-        mPullRecyclerView.setAdapter(mAdapter);
+        mGroupListAdapter = new GroupListAdapter(getActivity(), R.layout.fragment_group_list_item, myGroupsList);
+        mPullRecyclerView.setAdapter(mGroupListAdapter);
 
         janusControl = new JanusControl(this,MyApplication.getUserName(),MyApplication.getUserId(),MyApplication.getDefaultGroupId());
         janusControl.Start();
@@ -109,7 +109,7 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
         //第一次进来发起请求
         if (UserBean.getUserBean() != null) {
             mPullRecyclerView.postRefreshing();
-            updateGroupsInfo();
+            handleUpdateGroupInfoBack();
             mPullRecyclerView.stopRefresh();
         }
         mPullRecyclerView.setOnRecyclerRefreshListener(new PullRecyclerView.OnRecyclerRefreshListener() {
@@ -117,7 +117,7 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             public void onPullRefresh() {
                 // 下拉刷新事件被触发
                 if (UserBean.getUserBean() != null) {
-                    updateGroupsInfo();
+                    handleUpdateGroupInfoBack();
                     mPullRecyclerView.stopRefresh();
                 }
             }
@@ -142,28 +142,36 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
         menu.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(new Intent(getContext(), GroupCreateActivity.class));
+                Intent intent = new Intent(getContext(), GroupCreateActivity.class);
+//                intent.putExtra("addFlag", 0);
+                startActivityForResult(intent, 1000);
+//                startActivity(intent);
             }
         });
     }
 
     // Updating groups' info. Attentions someone invited you into a group, so we need pull user's groups info from server and update local
-    public void updateGroupsInfo() {
+    public void handleUpdateGroupInfoBack() {
         TalkCloudApp.GrpListReq grpListReq = TalkCloudApp.GrpListReq.newBuilder().setUid(UserBean.getUserBean().getUserId()).build();
-        TalkCloudApp.GroupListRsp groupListRsp = null;
+
         try {
-            Future<TalkCloudApp.GroupListRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.GroupListRsp>() {
+            GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Runnable() {
                 @Override
-                public TalkCloudApp.GroupListRsp call() {
-                    return GrpcConnectionManager.getInstance().getBlockingStub().getGroupList(grpListReq);
+                public void run() {
+                    TalkCloudApp.GroupListRsp groupListRsp = GrpcConnectionManager.getInstance().getBlockingStub().getGroupList(grpListReq);
+
+                    Message msg = Message.obtain();
+                    msg.obj = groupListRsp;
+                    msg.what = 100;
+                    handler.sendMessage(msg);
                 }
             });
-
-            groupListRsp = future.get();
         } catch (Exception e) {
             //TODO Exception catch later
         }
+    }
 
+    public void updateGroupsInfo(TalkCloudApp.GroupListRsp groupListRsp) {
         if (groupListRsp == null) {
             Toast.makeText(getContext(), R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
             return;
@@ -174,8 +182,8 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
             return;
         }
 
-        if(myList.size() != 0){
-            myList.clear();
+        if(myGroupsList.size() != 0){
+            myGroupsList.clear();
         }
 
         // 更新用户群组信息
@@ -183,37 +191,23 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
         ArrayList<UserGroupBean> userGroupBeanArrayList = new ArrayList<UserGroupBean>();
         for (TalkCloudApp.GroupInfo groupRecord : groupListRsp.getGroupListList()) {
             UserGroupBean userGroupBean = new UserGroupBean();
-            userGroupBean.setUserGroupId(groupRecord.getGid());
-            userGroupBean.setUserGroupName(groupRecord.getGroupName());
-            ArrayList<UserFriendBean> memberList = new ArrayList<>();
+            userGroupBean.setUserGroupBeanObj(groupRecord);
 
-            // Inserting friends into group
-            for (TalkCloudApp.UserRecord userRecord: groupRecord.getUsrListList()) {
-                UserFriendBean userFriendBean = new UserFriendBean();
-                userFriendBean.setUserFriendName(userRecord.getName());
-                userFriendBean.setUserFriendId(userRecord.getUid());
-                userFriendBean.setGroupRole(userRecord.getGrpRole());
-                userFriendBean.setOnline(userRecord.getOnline());
-                if(groupRecord.getGroupManager() == userRecord.getUid()){
-                    userGroupBean.setGroupManagerId(userFriendBean.getUserFriendId());
-                }
-                memberList.add(userFriendBean);
-            }
-            userGroupBean.setUserFriendBeanArrayList(memberList);
             userGroupBeanArrayList.add(userGroupBean);
         }
-        myList.addAll(userGroupBeanArrayList);
-        mAdapter.notifyDataSetChanged();
+        myGroupsList.addAll(userGroupBeanArrayList);
 
         //保存group信息
         if (UserBean.getUserBean() != null) {
-            UserBean.getUserBean().setUserGroupBeanArrayList(userGroupBeanArrayList);
+            UserBean.getUserBean().setUserGroupBeanArrayList(myGroupsList);
         }
 
-        //如果没有默认房间，创建新群组刷新之后，将会默认进入第一个群组里面，
-        if(MyApplication.getDefaultGroupId() == 0 && userGroupBeanArrayList.size()>0){
+        mGroupListAdapter.notifyDataSetChanged();
+
+        //如果没有默认房间(新账号没有群组的情况），创建新群组刷新之后，将会默认进入第一个群组里面，
+        if(MyApplication.getDefaultGroupId() == 0 && userGroupBeanArrayList.size() > 0){
             MyApplication.setDefaultGroupId(userGroupBeanArrayList.get(0).getUserGroupId());
-            JanusControl.sendPocRoomJoinRoom(FragmentGroup.this,MyApplication.getDefaultGroupId());
+            JanusControl.sendPocRoomJoinRoom(FragmentGroup.this, MyApplication.getDefaultGroupId());
         }
     }
 
@@ -228,9 +222,8 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
 
         @Override
         protected void converted(BaseViewHolder holder, Object item, int position) {
-//            final UserGroupBean data = myList.get(position);
-            final UserGroupBean data = UserBean.getUserBean().getUserGroupBeanArrayList().get(position);
-//            String onlineState = "(" + data.getOnlineMembersCount() + "/" + data.getTotalMembersCount() + ")";
+            final UserGroupBean data = myGroupsList.get(position);
+
             String onlineState = "(" + data.getOnlineMembersCountLocal() + "/" + data.getTotalMembersCount() + ")";
             holder.setText(R.id.fragment_group_list_item_name, data.getUserGroupName() + onlineState);
             holder.setText(R.id.fragment_group_list_item_state, data.getUserGroupId() + "");
@@ -277,7 +270,7 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                                     changeroomid = data.getUserGroupId();
 
                                     MyApplication.setDefaultGroupId(changeroomid);
-                                    setLockGroupId(changeroomid);//TODO
+                                    handleSetLockGroupIdBack(changeroomid);//TODO
                                     dialog.dismiss();
                                 }
                             })
@@ -344,11 +337,50 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
 
     }
 
+    public void handleSetLockGroupIdBack(int lockGroupId) {
+        int gid = lockGroupId;
+        int uid = UserBean.getUserBean().getUserId();
+        TalkCloudApp.SetLockGroupIdReq setLockGroupIdReq = TalkCloudApp.SetLockGroupIdReq.newBuilder().setGId(gid).setUId(uid).build();
+        try {
+            GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Runnable() {
+                @Override
+                public void run() {
+                    TalkCloudApp.SetLockGroupIdResp setLockGroupIdResp = GrpcConnectionManager.getInstance().getBlockingStub().setLockGroupId(setLockGroupIdReq);
+                }
+            });
+        } catch (Exception e) {
+
+        }
+
+        mGroupListAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if(resultCode == RESULT_OK && requestCode == 1000){
+            Toast.makeText(getContext(), "createGroupSuccess", Toast.LENGTH_SHORT).show();
+
+            Message msg = Message.obtain();
+            msg.what = 200;
+            handler.sendMessage(msg);
+        }
+    }
+
+    // Update groupInfo after creating group return
+    public void update() {
+        myGroupsList.clear();
+
+        myGroupsList.addAll(UserBean.getUserBean().getUserGroupBeanArrayList());
+        mGroupListAdapter.notifyDataSetChanged();
+    }
+
     private Handler handler = new Handler() {
         public void handleMessage(android.os.Message msg) {
             switch (msg.what) {
                 case 1:
-                    mAdapter.notifyDataSetChanged();
+                    mGroupListAdapter.notifyDataSetChanged();
                     break;
                 case 2:
                     //webRtc链接成功之后，开启悬浮窗
@@ -361,29 +393,17 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
                     break;
                 case 3:
                     MyApplication.setDefaultGroupId(changeroomid);
-                    setLockGroupId(changeroomid);//TODO
-                    mAdapter.notifyDataSetChanged();
+                    handleSetLockGroupIdBack(changeroomid);//TODO
+                    break;
+                case 100:
+                    updateGroupsInfo((TalkCloudApp.GroupListRsp)msg.obj);
+                    break;
+                case 200:
+                    mPullRecyclerView.postRefreshing();
+                    update();
+                    mPullRecyclerView.stopRefresh();
                     break;
             }
         };
     };
-
-    public void setLockGroupId(int lockGroupId) {
-        int gid = lockGroupId;
-        int uid = UserBean.getUserBean().getUserId();
-        TalkCloudApp.SetLockGroupIdReq setLockGroupIdReq = TalkCloudApp.SetLockGroupIdReq.newBuilder().setGId(gid).setUId(uid).build();
-        TalkCloudApp.SetLockGroupIdResp setLockGroupIdResp = null;
-        try {
-            Future<TalkCloudApp.SetLockGroupIdResp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.SetLockGroupIdResp>() {
-                @Override
-                public TalkCloudApp.SetLockGroupIdResp call() throws Exception {
-                    return GrpcConnectionManager.getInstance().getBlockingStub().setLockGroupId(setLockGroupIdReq);
-                }
-            });
-
-            setLockGroupIdResp = future.get(); // TODO No use?
-        } catch (Exception e) {
-            // TODO Nothing here
-        }
-    }
 }

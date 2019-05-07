@@ -2,6 +2,8 @@ package com.example.janusandroidtalk.activity;
 
 import android.app.Dialog;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.view.KeyEvent;
@@ -27,8 +29,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 import talk_cloud.TalkCloudApp;
 
@@ -103,13 +103,13 @@ public class SearchActivity extends AppCompatActivity {
                             case 0:
                                 //搜索群组
                                 if (UserBean.getUserBean() != null) {
-                                    searchGroupList();
+                                    handleSearchGroupListBack();
                                 }
                                 break;
                             case 1:
                                 //搜索好友
                                 if (UserBean.getUserBean() != null) {
-                                    searchFriendList();
+                                    handleSearchFriendListBack();
                                 }
                                 break;
                         }
@@ -122,27 +122,31 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     //搜索群组列表请求
-    public void searchGroupList() {
+    public void handleSearchGroupListBack() {
         loading.show();
 
         int id = UserBean.getUserBean().getUserId();
         String target = editSearch.getText().toString();
         TalkCloudApp.GrpSearchReq grpSearchReq = TalkCloudApp.GrpSearchReq.newBuilder().setUid(id).setTarget(target).build();
-        TalkCloudApp.GroupListRsp groupListRsp = null;
+
         try {
-            Future<TalkCloudApp.GroupListRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.GroupListRsp>() {
+            GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Runnable() {
                 @Override
-                public TalkCloudApp.GroupListRsp call() throws Exception {
-                    return GrpcConnectionManager.getInstance().getBlockingStub().searchGroup(grpSearchReq);
+                public void run() {
+                    TalkCloudApp.GroupListRsp groupListRsp = GrpcConnectionManager.getInstance().getBlockingStub().searchGroup(grpSearchReq);
+
+                    Message msg = Message.obtain();
+                    msg.what = 100;
+                    msg.obj = groupListRsp;
+                    handler.sendMessage(msg);
                 }
             });
-
-            groupListRsp = future.get();
         } catch (Exception e) {
-            //TODO Nothing here
-        }
 
-        loading.dismiss();
+        }
+    }
+
+    public void searchGroupList(TalkCloudApp.GroupListRsp groupListRsp) {loading.dismiss();
         if(groupListRsp == null){
             Toast.makeText(SearchActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
             return;
@@ -176,27 +180,33 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     //搜索好友列表请求
-    public void searchFriendList() {
+    public void handleSearchFriendListBack() {
         loading.show();
 
         int id = UserBean.getUserBean().getUserId();
         String target = editSearch.getText().toString();
         TalkCloudApp.UserSearchReq userSearchReq = TalkCloudApp.UserSearchReq.newBuilder().setUid(id).setTarget(target).build();
-        TalkCloudApp.UserSearchRsp userSearchRsp = null;
+
         try {
-            Future<TalkCloudApp.UserSearchRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.UserSearchRsp>() {
+            GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Runnable() {
                 @Override
-                public TalkCloudApp.UserSearchRsp call() throws Exception {
-                    return GrpcConnectionManager.getInstance().getBlockingStub().searchUserByKey(userSearchReq);
+                public void run() {
+                    TalkCloudApp.UserSearchRsp userSearchRsp = GrpcConnectionManager.getInstance().getBlockingStub().searchUserByKey(userSearchReq);
+
+                    Message msg = Message.obtain();
+                    msg.obj = userSearchRsp;
+                    msg.what = 200;
+                    handler.sendMessage(msg);
                 }
             });
-
-            userSearchRsp = future.get();
         } catch (Exception e) {
 
         }
+    }
 
+    public void searchFriendList(TalkCloudApp.UserSearchRsp userSearchRsp) {
         loading.dismiss();
+
         if(userSearchRsp == null){
             Toast.makeText(SearchActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
             return;
@@ -232,26 +242,31 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     //添加群组请求
-    public void userAddGroup(String uidStr, String gidStr) {
+    public void handleUserAddGroupBack(String uidStr, String gidStr) {
         loading.show();
 
         int uid = Integer.parseInt(uidStr);
         int gid = Integer.parseInt(gidStr);
         TalkCloudApp.GrpUserAddReq grpUserAddReq = TalkCloudApp.GrpUserAddReq.newBuilder().setUid(uid).setGid(gid).build();
-        TalkCloudApp.GrpUserAddRsp grpUserAddRsp = null;
+
         try {
-            Future<TalkCloudApp.GrpUserAddRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.GrpUserAddRsp>() {
+            GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Runnable() {
                 @Override
-                public TalkCloudApp.GrpUserAddRsp call() throws Exception {
-                    return GrpcConnectionManager.getInstance().getBlockingStub().joinGroup(grpUserAddReq);
+                public void run() {
+                    TalkCloudApp.GrpUserAddRsp grpUserAddRsp = GrpcConnectionManager.getInstance().getBlockingStub().joinGroup(grpUserAddReq);
+
+                    Message msg = Message.obtain();
+                    msg.obj = grpUserAddRsp;
+                    msg.what = 300;
+                    handler.sendMessage(msg);
                 }
             });
-
-            grpUserAddRsp = future.get();
         } catch (Exception e) {
             //TODO Nothing here
         }
+    }
 
+    public void userAddGroup(TalkCloudApp.GrpUserAddRsp grpUserAddRsp) {
         loading.dismiss();
 
         if(grpUserAddRsp == null){
@@ -270,26 +285,31 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     //添加好友请求
-    public void userAddFriend(String uidStr, String friendIdStr) {
+    public void handleUserAddFriendBack(String uidStr, String friendIdStr) {
         loading.show();
 
         int uid = Integer.parseInt(uidStr);
         int friendId = Integer.parseInt(friendIdStr);
         TalkCloudApp.FriendNewReq friendNewReq = TalkCloudApp.FriendNewReq.newBuilder().setUid(uid).setFuid(friendId).build();
-        TalkCloudApp.FriendNewRsp friendNewRsp = null;
+
         try {
-            Future<TalkCloudApp.FriendNewRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.FriendNewRsp>() {
+            GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Runnable() {
                 @Override
-                public TalkCloudApp.FriendNewRsp call() throws Exception {
-                    return GrpcConnectionManager.getInstance().getBlockingStub().addFriend(friendNewReq);
+                public void run() {
+                    TalkCloudApp.FriendNewRsp friendNewRsp = GrpcConnectionManager.getInstance().getBlockingStub().addFriend(friendNewReq);
+
+                    Message msg = Message.obtain();
+                    msg.obj = friendNewRsp;
+                    msg.what = 400;
+                    handler.sendMessage(msg);
                 }
             });
-
-            friendNewRsp = future.get();
         } catch (Exception e) {
             //TODO Nothing here
         }
+    }
 
+    public void userAddFriend(TalkCloudApp.FriendNewRsp friendNewRsp) {
         loading.dismiss();
 
         if(friendNewRsp == null){
@@ -358,7 +378,7 @@ public class SearchActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     myPosition = position;
                     if (UserBean.getUserBean() != null) {
-                        userAddGroup(UserBean.getUserBean().getUserId() + "", map.get("gid"));
+                        handleUserAddGroupBack(UserBean.getUserBean().getUserId() + "", map.get("gid"));
                     }
                 }
             });
@@ -425,7 +445,7 @@ public class SearchActivity extends AppCompatActivity {
                 public void onClick(View v) {
                     myPosition = position;
                     if (UserBean.getUserBean() != null) {
-                        userAddFriend(UserBean.getUserBean().getUserId() + "", map.get("uid"));
+                        handleUserAddFriendBack(UserBean.getUserBean().getUserId() + "", map.get("uid"));
                     }
                 }
             });
@@ -440,4 +460,25 @@ public class SearchActivity extends AppCompatActivity {
             TextView textViewBtn;
         }
     }
+
+    Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case 100:
+                    searchGroupList((TalkCloudApp.GroupListRsp)msg.obj);
+                    break;
+                case 200:
+                    searchFriendList((TalkCloudApp.UserSearchRsp)msg.obj);
+                    break;
+                case 300:
+                    userAddGroup((TalkCloudApp.GrpUserAddRsp)msg.obj);
+                    break;
+                case 400:
+                    userAddFriend((TalkCloudApp.FriendNewRsp)msg.obj);
+                    break;
+            }
+        }
+    };
 }

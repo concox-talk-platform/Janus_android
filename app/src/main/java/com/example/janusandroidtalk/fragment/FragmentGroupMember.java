@@ -6,6 +6,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -32,8 +34,6 @@ import com.example.janusandroidtalk.pullrecyclerview.layoutmanager.XLinearLayout
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 import talk_cloud.TalkCloudApp;
 
@@ -86,6 +86,8 @@ public class FragmentGroupMember extends Fragment{
             currentGroup = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
             groupMemberList = currentGroup.getUserFriendBeanArrayList();
             title.setText(currentGroup.getUserGroupName());
+
+            title.setText(UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition).getUserGroupName());
         }
 
         //网络请求加载框
@@ -102,7 +104,6 @@ public class FragmentGroupMember extends Fragment{
         //第一次进来发起请求
         if (UserBean.getUserBean() != null) {
             mPullRecyclerView.postRefreshing();
-//            updateGroupMemberList();
             groupMemberList = currentGroup.getUserFriendBeanArrayList();
             mPullRecyclerView.stopRefresh();
         }
@@ -112,8 +113,9 @@ public class FragmentGroupMember extends Fragment{
             public void onPullRefresh() {
                 // 下拉刷新事件被触发
                 if (UserBean.getUserBean() != null) {
-//                    updateGroupMemberList();
+                    currentGroup = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
                     groupMemberList = currentGroup.getUserFriendBeanArrayList();
+                    groupMemberListAdapter.notifyDataSetChanged();
                     mPullRecyclerView.stopRefresh();
                 }
             }
@@ -124,7 +126,7 @@ public class FragmentGroupMember extends Fragment{
             }
         });
 
-        //进入groupcreateActivity 进行添加成员进群
+        //进入groupCreateActivity 进行添加成员进群
         setting.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -154,7 +156,7 @@ public class FragmentGroupMember extends Fragment{
 
         @Override
         protected void converted(BaseViewHolder holder, Object item, int position) {
-            final UserFriendBean data = currentGroup.getUserFriendBeanArrayList().get(position);
+            final UserFriendBean data = groupMemberList.get(position);
 
             ImageView imageView_portrait = holder.getView(R.id.group_member_list_item_image);       // Portrait
             holder.setText(R.id.group_member_list_item_name, data.getUserFriendName() + "");  // Name
@@ -195,7 +197,10 @@ public class FragmentGroupMember extends Fragment{
                     public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
                         //Todo 调用删除群组成员接口
-                        groupDeleteMember(deleteUserId);
+//                        groupDeleteMember(deleteUserId);
+                        Toast.makeText(getContext(), "do in back", Toast.LENGTH_SHORT).show();
+                        handleGroupDeleteMemberBack(deleteUserId);
+                        Toast.makeText(getContext(), "done", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
@@ -209,23 +214,28 @@ public class FragmentGroupMember extends Fragment{
 
     // 删除群组成员
     // Delete group member thread
-    public void groupDeleteMember(int deleteUserId) {
+    public void handleGroupDeleteMemberBack(int deleteUserId) {
         int gid = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition).getUserGroupId();
         TalkCloudApp.GrpUserDelReq grpUserDelReq = TalkCloudApp.GrpUserDelReq.newBuilder().setGid(gid).setUid(deleteUserId).build();
-        TalkCloudApp.GrpUserDelRsp grpUserDelRsp = null;
+
         try {
-            Future<TalkCloudApp.GrpUserDelRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.GrpUserDelRsp>() {
+            GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Runnable() {
                 @Override
-                public TalkCloudApp.GrpUserDelRsp call() throws Exception {
-                    return GrpcConnectionManager.getInstance().getBlockingStub().removeGrpUser(grpUserDelReq);
+                public void run() {
+                    TalkCloudApp.GrpUserDelRsp grpUserDelRsp = GrpcConnectionManager.getInstance().getBlockingStub().removeGrpUser(grpUserDelReq);
+
+                    Message msg = Message.obtain();
+                    msg.obj = grpUserDelRsp;
+                    msg.what = 100;
+                    handler.sendMessage(msg);
                 }
             });
-
-            grpUserDelRsp = future.get();
         } catch (Exception e) {
-            //TODO Nothing here
-        }
 
+        }
+    }
+
+    public void groupDeleteMember(TalkCloudApp.GrpUserDelRsp grpUserDelRsp) {
         loading.dismiss();
 
         if (grpUserDelRsp == null) {
@@ -248,9 +258,23 @@ public class FragmentGroupMember extends Fragment{
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(resultCode == RESULT_OK && requestCode == 1000){
+            Toast.makeText(getContext(), "onActivityResult", Toast.LENGTH_SHORT).show();
             currentGroup = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
-            groupMemberList = currentGroup.getUserFriendBeanArrayList();
+            groupMemberList.clear();
+            groupMemberList.addAll(currentGroup.getUserFriendBeanArrayList());
             groupMemberListAdapter.notifyDataSetChanged();
         }
     }
+
+    private Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {      //判断标志位
+                case 100:
+                    groupDeleteMember((TalkCloudApp.GrpUserDelRsp)msg.obj);
+                    break;
+            }
+        }
+    };
 }

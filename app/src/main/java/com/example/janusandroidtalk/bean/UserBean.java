@@ -11,8 +11,10 @@ public class UserBean implements Serializable {
     private String nickName;
     private String iMei;
     private int online; // 2 online, 1 offline
-    private ArrayList<UserFriendBean> userFriendBeanArrayList;
-    private ArrayList<UserGroupBean> userGroupBeanArrayList;
+    private ArrayList<UserFriendBean> userFriendBeanArrayList = new ArrayList<>();
+    private ArrayList<UserGroupBean> userGroupBeanArrayList = new ArrayList<>();
+
+    private static UserBean userBeanObj = new UserBean();
 
     public String getUserName() {
         return userName;
@@ -78,7 +80,15 @@ public class UserBean implements Serializable {
         this.userGroupBeanArrayList = userGroupBeanArrayList;
     }
 
-    private static UserBean userBeanObj = null;
+    public int isOnline() {
+        return online;
+    }
+
+    public void setOnline(int online) {
+        this.online = online;
+    }
+
+
     public static UserBean setUserBean(UserBean userBean){
         userBeanObj = userBean;
         return userBeanObj;
@@ -88,13 +98,5 @@ public class UserBean implements Serializable {
     }
     public static void clearUserBean(){
         userBeanObj = null;
-    }
-
-    public int isOnline() {
-        return online;
-    }
-
-    public void setOnline(int online) {
-        this.online = online;
     }
 }

@@ -41,15 +41,13 @@ import org.webrtc.MediaStream;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 import talk_cloud.TalkCloudApp;
 
 public class FragmentMine extends Fragment implements MyControlCallBack {
 
     private PullRecyclerView mPullRecyclerView;
-    private List<UserFriendBean> myList = new ArrayList<>();
+    private List<UserFriendBean> friendsList = new ArrayList<>();
     private MineListAdapter mAdapter;
 
     private LinearLayout searchView;
@@ -89,7 +87,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
         imageView = getActivity().findViewById(R.id.mine_menu);
 
         mPullRecyclerView.setLayoutManager(new XLinearLayoutManager(getActivity()));
-        mAdapter = new MineListAdapter(getActivity(), R.layout.fragment_mine_list_item, myList);
+        mAdapter = new MineListAdapter(getActivity(), R.layout.fragment_mine_list_item, friendsList);
         mPullRecyclerView.setAdapter(mAdapter);
         mPullRecyclerView.setColorSchemeResources(R.color.colorMain);
         mPullRecyclerView.enableLoadMore(false);
@@ -98,7 +96,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
         //第一次进来发起请求
         if (UserBean.getUserBean() != null) {
             mPullRecyclerView.postRefreshing();
-            updateFriendsInfo();
+            handleUpdateFriendsInfoBack();
         }
         //下拉刷新
         mPullRecyclerView.setOnRecyclerRefreshListener(new PullRecyclerView.OnRecyclerRefreshListener() {
@@ -106,7 +104,8 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
             public void onPullRefresh() {
                 // 下拉刷新事件被触发
                 if (UserBean.getUserBean() != null) {
-                    updateFriendsInfo();
+                    handleUpdateFriendsInfoBack();
+                    mPullRecyclerView.stopRefresh();
                 }
             }
 
@@ -158,24 +157,27 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
     }
 
     //Updating friends' info
-    public void updateFriendsInfo() {
+    public void handleUpdateFriendsInfoBack() {
         TalkCloudApp.FriendsReq friendsReq = TalkCloudApp.FriendsReq.newBuilder().setUid(UserBean.getUserBean().getUserId()).build();
-        TalkCloudApp.FriendsRsp friendsRsp = null;
+
         try {
-            Future<TalkCloudApp.FriendsRsp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.FriendsRsp>() {
+            GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Runnable() {
                 @Override
-                public TalkCloudApp.FriendsRsp call() {
-                    return GrpcConnectionManager.getInstance().getBlockingStub().getFriendList(friendsReq);
+                public void run() {
+                    TalkCloudApp.FriendsRsp friendsRsp = GrpcConnectionManager.getInstance().getBlockingStub().getFriendList(friendsReq);
+
+                    Message msg = Message.obtain();
+                    msg.obj = friendsRsp;
+                    msg.what = 100;
+                    handler.sendMessage(msg);
                 }
             });
-
-            friendsRsp = future.get();
         } catch (Exception e) {
-            //TODO nothing here
+
         }
+    }
 
-        mPullRecyclerView.stopRefresh();
-
+    public void updateFriendsInfo(TalkCloudApp.FriendsRsp friendsRsp) {
         if(friendsRsp == null){
             Toast.makeText(getContext(), R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
             return;
@@ -186,7 +188,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
             return;
         }
 
-        myList.clear();
+        friendsList.clear();
         ArrayList<UserFriendBean> userFriendBeanArrayList = new ArrayList<UserFriendBean>();
         for (TalkCloudApp.FriendRecord friendRecord : friendsRsp.getFriendListList()) {
             UserFriendBean userFriendBean = new UserFriendBean();
@@ -194,8 +196,10 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
             userFriendBean.setUserFriendName(friendRecord.getName());
             userFriendBeanArrayList.add(userFriendBean);
         }
-        myList.addAll(userFriendBeanArrayList);
+        friendsList.addAll(userFriendBeanArrayList);
+
         mAdapter.notifyDataSetChanged();
+
         if (UserBean.getUserBean() != null) {
             UserBean.getUserBean().setUserFriendBeanArrayList(userFriendBeanArrayList);
         }
@@ -209,7 +213,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
         }
         @Override
         protected void converted(BaseViewHolder holder, Object item, int position) {
-            final UserFriendBean data = myList.get(position);
+            final UserFriendBean data = friendsList.get(position);
             holder.setText(R.id.fragment_mine_list_item_name,data.getUserFriendName());
             holder.setText(R.id.fragment_mine_list_item_state,data.getUserFriendId()+"");
             ImageView imageViewVideo = holder.getView(R.id.fragment_mine_list_item_video_call);
@@ -282,21 +286,6 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
         }
     }
 
-    private Handler handler = new Handler() {
-        public void handleMessage(android.os.Message msg) {
-            switch (msg.what) {
-                case 0:
-                    Intent intent = new Intent(getActivity(), CallActivity.class);
-                    intent.putExtra("isCall",true);
-                    intent.putExtra("isVideo",isVideo);
-                    intent.putExtra("name",name);
-                    intent.putExtra("remoteId",remoteId);
-                    getActivity().startActivity(intent);
-                    break;
-            }
-        }
-    };
-
     @Override
     public void showMessage(JSONObject msg, JSONObject jsepLocal) {
 
@@ -311,5 +300,23 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
     public void onAddRemoteStream(MediaStream stream) {
 
     }
+
+    private Handler handler = new Handler() {
+        public void handleMessage(android.os.Message msg) {
+            switch (msg.what) {
+                case 0:
+                    Intent intent = new Intent(getActivity(), CallActivity.class);
+                    intent.putExtra("isCall",true);
+                    intent.putExtra("isVideo",isVideo);
+                    intent.putExtra("name",name);
+                    intent.putExtra("remoteId",remoteId);
+                    getActivity().startActivity(intent);
+                    break;
+                case 100:
+                    updateFriendsInfo((TalkCloudApp.FriendsRsp)msg.obj);
+                    break;
+            }
+        }
+    };
 
 }

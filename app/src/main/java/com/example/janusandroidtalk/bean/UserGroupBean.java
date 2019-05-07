@@ -3,13 +3,13 @@ package com.example.janusandroidtalk.bean;
 import java.io.Serializable;
 import java.util.ArrayList;
 
+import talk_cloud.TalkCloudApp;
+
 public class UserGroupBean implements Serializable {
     private String userGroupName;
     private int userGroupId;
-    private ArrayList<UserFriendBean> userFriendBeanArrayList;
+    private ArrayList<UserFriendBean> userFriendBeanArrayList = new ArrayList<>();
 //    private int userGroupRole;//群主为2,其他参与者为1
-
-    private int OnlineMembersCount;
 
     // Group manager
     private int groupManagerId;
@@ -82,11 +82,19 @@ public class UserGroupBean implements Serializable {
         return count;
     }
 
-    public int getOnlineMembersCount() {
-        return this.OnlineMembersCount;
-    }
+    public void setUserGroupBeanObj(TalkCloudApp.GroupInfo groupInfo) {
+        this.userGroupId = groupInfo.getGid();
+        this.userGroupName = groupInfo.getGroupName();
+        this.groupManagerId = groupInfo.getGroupManager();
 
-    public void  setOnlineMembersCount(int onlineMembersCount) {
-        this.OnlineMembersCount = onlineMembersCount;
+        ArrayList<UserFriendBean> memberList = new ArrayList<>();
+        for (TalkCloudApp.UserRecord userRecord : groupInfo.getUsrListList()) {
+            UserFriendBean userFriendBean = new UserFriendBean();
+            userFriendBean.setUserFriendBeanObjByUserRecord(userRecord);
+
+            memberList.add(userFriendBean);
+        }
+
+        this.userFriendBeanArrayList.addAll(memberList);
     }
 }

@@ -2,6 +2,8 @@ package com.example.janusandroidtalk.bean;
 
 import java.io.Serializable;
 
+import talk_cloud.TalkCloudApp;
+
 public class UserFriendBean implements Serializable {
     private String userFriendName;
     private int userFriendId;
@@ -77,5 +79,24 @@ public class UserFriendBean implements Serializable {
     }
     public static void clearUserFriendBean(){
         userFriendBeanObj = null;
+    }
+
+    public void setUserFriendBeanObjByUserRecord(TalkCloudApp.UserRecord userRecord) {
+        this.userFriendName = userRecord.getName();
+        this.userFriendId = userRecord.getUid();
+        this.groupRole = userRecord.getGrpRole();
+
+
+        if (userRecord.getUid() == UserBean.getUserBean().getUserId()) { //TODO
+            this.online = 2;
+        } else {
+            this.online = userRecord.getOnline();
+        }
+        // FIXME
+    }
+
+    public void setUserFriendBeanObjByFriendRecord(TalkCloudApp.FriendRecord friendRecord) {
+        this.userFriendName = friendRecord.getName();
+        this.userFriendId = friendRecord.getUid();
     }
 }

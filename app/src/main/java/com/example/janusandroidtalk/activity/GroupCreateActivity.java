@@ -46,24 +46,23 @@ import java.util.concurrent.Future;
 import talk_cloud.TalkCloudApp;
 
 public class GroupCreateActivity extends AppCompatActivity implements MyControlCallBack {
-
     private EditText editSearch;
     private Dialog loading;
     private TextView menu;
     private TextView title;
-
-    private ArrayList<UserFriendBean> myList = new ArrayList<>();
     private ImageView toolbarBack = null;
-    private ListView listView;
 
+    private ArrayList<UserFriendBean> myFriendsList = new ArrayList<>();
+
+    private ListView listView;
     private GroupListAdapter groupListAdapter;
 
     private int sum = 0;
     private String userIds = "";
 
-    private int groupPosition = 0;//当前群组
-    private int addFlag = 0;//0为创建群组，1为添加成员，
-    private UserGroupBean userGroupBean;//当前群组对象，
+    private int groupPosition = 0;        //当前群组
+    private int addFlag = 0;              //0为创建群组，1为添加成员，
+    private UserGroupBean currentGroup;  //当前群组对象，
 
     // 当前群组已添加成员列表
     private ArrayList<UserFriendBean> addedList = new ArrayList<>();
@@ -83,13 +82,13 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
         //赋值用户好友列表
         if (UserBean.getUserBean() != null && addFlag == 0 ) {
             //创建群组
-            myList = UserBean.getUserBean().getUserFriendBeanArrayList();
+            myFriendsList = UserBean.getUserBean().getUserFriendBeanArrayList();
         }else if(UserBean.getUserBean() != null && addFlag == 1 ){
             //获取当前群组的成员列表，并将已在群组的好友设置为已经选择
-            userGroupBean = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
-            myList = UserBean.getUserBean().getUserFriendBeanArrayList();
-            for (UserFriendBean userFriendBean: myList) {
-                for(UserFriendBean userFriendBeanMember: userGroupBean.getUserFriendBeanArrayList()){
+            currentGroup = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
+            myFriendsList = UserBean.getUserBean().getUserFriendBeanArrayList();
+            for (UserFriendBean userFriendBean: myFriendsList) {
+                for(UserFriendBean userFriendBeanMember: currentGroup.getUserFriendBeanArrayList()){
                     if(userFriendBean.getUserFriendId() == userFriendBeanMember.getUserFriendId()){
                         userFriendBean.setInGroup(true);
                         addedList.add(userFriendBean);
@@ -111,7 +110,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
         toolbarBack.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                for (UserFriendBean userFriendBean: myList) {
+                for (UserFriendBean userFriendBean: myFriendsList) {
                     userFriendBean.setCheck(false);
                 }
                 GroupCreateActivity.this.finish();
@@ -139,12 +138,12 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
                                public void onClick(DialogInterface dialog, int which) {
                                    if(!TextUtils.isEmpty(editText.getText().toString())){
                                        dialog.dismiss();
-                                       for (UserFriendBean userFriendBean: myList) {
+                                       for (UserFriendBean userFriendBean: myFriendsList) {
                                            if(userFriendBean.isCheck()){
                                                userIds = userIds + "," + userFriendBean.getUserFriendId();
                                            }
                                        }
-                                       createGroup(userIds, editText.getText().toString());
+                                       handleCreateGroupBack(userIds, editText.getText().toString());
                                    }
                                }
                            })
@@ -162,12 +161,12 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
                                @Override
                                public void onClick(DialogInterface dialog, int which) {
                                    dialog.dismiss();
-                                   for (UserFriendBean userFriendBean: myList) {
+                                   for (UserFriendBean userFriendBean: myFriendsList) {
                                        if(userFriendBean.isCheck()){
                                            userIds = userIds + "," + userFriendBean.getUserFriendId();
                                        }
                                    }
-                                   addGroupMember(userIds);
+                                   handleAddGroupMemberBack(userIds);
                                }
                            })
                            .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
@@ -198,7 +197,6 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
                 //
             }
         });
-
     }
 
     //群组列表adapter
@@ -207,7 +205,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
         //总行数
         @Override
         public int getCount() {
-            return myList.size();
+            return myFriendsList.size();
         }
 
         @Override
@@ -236,11 +234,11 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
                 holder = (ViewHolder) convertView.getTag();
             }
 
-            holder.nameTextView.setText(myList.get(position).getUserFriendName());
-            holder.stateTextView.setText(myList.get(position).getUserFriendId() + "");
+            holder.nameTextView.setText(myFriendsList.get(position).getUserFriendName());
+            holder.stateTextView.setText(myFriendsList.get(position).getUserFriendId() + "");
             if(addFlag == 1){
                 for (UserFriendBean userFriendBean: addedList) {
-                    if (userFriendBean.getUserFriendId() == myList.get(position).getUserFriendId()) {
+                    if (userFriendBean.getUserFriendId() == myFriendsList.get(position).getUserFriendId()) {
                         holder.checkBox.setVisibility(View.GONE);
                         holder.textViewInGroup.setVisibility(View.VISIBLE);
                         holder.textViewInGroup.setText(R.string.search_str_added_group);
@@ -252,13 +250,13 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
             }
 
             holder.checkBox.setOnCheckedChangeListener(null);
-            holder.checkBox.setChecked(myList.get(position).isCheck());
+            holder.checkBox.setChecked(myFriendsList.get(position).isCheck());
             holder.checkBox.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
                     String sure = getResources().getString(R.string.toolbar_commit);
                     if (isChecked) {
-                        myList.get(position).setCheck(true);
+                        myFriendsList.get(position).setCheck(true);
                         sum = sum + 1;
                         menu.setText(sure+"(" + sum + ")");
                     } else {
@@ -268,13 +266,14 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
                         } else {
                             menu.setText(sure+"(" + sum + ")");
                         }
-                        myList.get(position).setCheck(false);
+                        myFriendsList.get(position).setCheck(false);
                     }
                 }
             });
 
             return convertView;
         }
+
         private ArrayFilter mFilter;
         private ArrayList<UserFriendBean> mOriginalValues;
         private final Object mLock = new Object();
@@ -294,7 +293,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
 
                 if (mOriginalValues == null) {
                     synchronized (mLock) {
-                        mOriginalValues = new ArrayList<UserFriendBean>(myList);
+                        mOriginalValues = new ArrayList<UserFriendBean>(myFriendsList);
                     }
                 }
 
@@ -347,7 +346,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
             @Override
             protected void publishResults(CharSequence constraint, FilterResults results) {
                 //noinspection unchecked
-                myList = (ArrayList<UserFriendBean>) results.values;
+                myFriendsList = (ArrayList<UserFriendBean>) results.values;
                 if (results.count > 0) {
                     notifyDataSetChanged();
                 } else {
@@ -366,7 +365,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
     }
 
     //添加群组请求
-    public void createGroup(String userIds, String groupName) {
+    public void handleCreateGroupBack(String userIds, String groupName) {
         loading.show();
 
         int accountId = 0;
@@ -375,26 +374,32 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
         }
 
         TalkCloudApp.CreateGroupReq createGroupReq = TalkCloudApp.CreateGroupReq.newBuilder().setDeviceIds(userIds).setGroupName(groupName).setAccountId(accountId).build();
-        TalkCloudApp.CreateGroupResp createGroupResp = null;
+
         try {
-            Future<TalkCloudApp.CreateGroupResp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.CreateGroupResp>() {
+            GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Runnable() {
                 @Override
-                public TalkCloudApp.CreateGroupResp call() throws Exception {
-                    return GrpcConnectionManager.getInstance().getBlockingStub().createGroup(createGroupReq);
+                public void run() {
+                    TalkCloudApp.CreateGroupResp createGroupResp = GrpcConnectionManager.getInstance().getBlockingStub().createGroup(createGroupReq);
+
+                    Message msg = Message.obtain();
+                    msg.obj = createGroupResp;
+                    msg.what = 200;
+                    handler.sendMessage(msg);
                 }
             });
-
-            createGroupResp = future.get();
         } catch (Exception e) {
-            //TODO Nothing here
-        }
 
+        }
+    }
+
+    public void createGroup(TalkCloudApp.CreateGroupResp createGroupResp) {
         loading.dismiss();
 
         if (createGroupResp == null) {
             Toast.makeText(GroupCreateActivity.this, R.string.request_data_null_tips, Toast.LENGTH_SHORT).show();
             return;
         }
+
         //判断createGroupResp code
         if (createGroupResp.getRes().getCode() != 200) {
             Toast.makeText(GroupCreateActivity.this, createGroupResp.getRes().getMsg(), Toast.LENGTH_SHORT).show();
@@ -402,30 +407,69 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
         } else {
             //创建成功
             JanusControl.sendCreateGroup(GroupCreateActivity.this, (int)(createGroupResp.getGroupInfo().getGid()));
+
+            //初始化新加群成员 FIXME CreateGroupResp 暂时有问题，没有对createGroupResp.getGroupInfo().getUsrListList()赋值
+//            UserGroupBean newGroup = new UserGroupBean();
+//            ArrayList<UserFriendBean> newGroupMemberList = new ArrayList<>();
+//            for (TalkCloudApp.UserRecord userRecord: createGroupResp.getGroupInfo().getUsrListList()) {
+//                UserFriendBean userFriendBean = new UserFriendBean();
+//                userFriendBean.setUserFriendName(userRecord.getName());
+//                userFriendBean.setUserFriendId(userRecord.getUid());
+//                userFriendBean.setOnline(userRecord.getOnline());
+//
+//                newGroupMemberList.add(userFriendBean);
+//            }
+//            System.out.println("CCCCCCCCCCCCCCCCCCC");
+//            System.out.println("size = " + newGroupMemberList.size());
+//            System.out.println("createGroupResp.getGroupInfo().getUsrListList() size = " + createGroupResp.getGroupInfo().getUsrListList().size());
+//
+//            newGroup.setGroupManagerId(createGroupResp.getGroupInfo().getGroupManager());
+//            newGroup.setUserFriendBeanArrayList(newGroupMemberList);
+//            newGroup.setUserGroupId(createGroupResp.getGroupInfo().getGid());
+//            newGroup.setUserGroupName(createGroupResp.getGroupInfo().getGroupName());
+//
+//            System.out.println("BBBBBBBBBBBBBBBBBBBBBBBBBB");
+//            System.out.println("size = " + newGroup.getUserFriendBeanArrayList().size());
+//
+//            UserBean.getUserBean().getUserGroupBeanArrayList().add(newGroup);
+//
+            setResult(RESULT_OK);
+
+//            UserBean.getUserBean().setOnline(2); // TODO
+            System.out.println("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM");
+            for (UserGroupBean userGroupBean : UserBean.getUserBean().getUserGroupBeanArrayList()) {
+                System.out.println(userGroupBean.getUserGroupName() + " online count = " + userGroupBean.getOnlineMembersCountLocal());
+            }
             GroupCreateActivity.this.finish();
         }
     }
 
     //添加好友进群
-    public void addGroupMember(String userIds) {
+    public void handleAddGroupMemberBack(String userIds) {
         loading.show();
 
-        int gid = userGroupBean.getUserGroupId();
+        int gid = currentGroup.getUserGroupId();
         TalkCloudApp.InviteUserReq inviteUserReq = TalkCloudApp.InviteUserReq.newBuilder().setGid(gid).setUids(userIds).build();
-        TalkCloudApp.InviteUserResp inviteUserResp = null;
+
         try {
-            Future<TalkCloudApp.InviteUserResp> future = GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Callable<TalkCloudApp.InviteUserResp>() {
+            GrpcConnectionManager.getInstance().getGrpcInstantRequestHandler().submit(new Runnable() {
                 @Override
-                public TalkCloudApp.InviteUserResp call() throws Exception {
-                    return GrpcConnectionManager.getInstance().getBlockingStub().inviteUserIntoGroup(inviteUserReq);
+                public void run() {
+                    loading.dismiss();
+                    TalkCloudApp.InviteUserResp inviteUserResp = GrpcConnectionManager.getInstance().getBlockingStub().inviteUserIntoGroup(inviteUserReq);
+
+                    Message msg = Message.obtain();
+                    msg.obj = inviteUserResp;
+                    msg.what = 100;
+                    handler.sendMessage(msg);
                 }
             });
-
-            inviteUserResp = future.get();
         } catch (Exception e) {
-            //TODO Nothing here
-        }
 
+        }
+    }
+
+    public void addGroupMember(TalkCloudApp.InviteUserResp inviteUserResp) {
         loading.dismiss();
 
         if (inviteUserResp == null) {
@@ -442,18 +486,21 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
 
             // 更新当前群成员列表
             // Updating the Group's UserFriendBeanArrayList
-            ArrayList<UserFriendBean> newAddedFriendsList = new ArrayList<UserFriendBean>();
-            for (TalkCloudApp.UserRecord newAddedFriend : inviteUserResp.getUsrListList()) {
+            ArrayList<UserFriendBean> newGroupMemberList = new ArrayList<UserFriendBean>();
+            for (TalkCloudApp.UserRecord newGroupMember : inviteUserResp.getUsrListList()) {
                 UserFriendBean userFriendBean = new UserFriendBean();
-                userFriendBean.setUserFriendId(newAddedFriend.getUid());
-                userFriendBean.setUserFriendName(newAddedFriend.getName());
+                // FIXME
+                userFriendBean.setUserFriendId(newGroupMember.getUid());
+                userFriendBean.setUserFriendName(newGroupMember.getName());
+                userFriendBean.setOnline(newGroupMember.getOnline());
 
-                newAddedFriendsList.add(userFriendBean);
+                newGroupMemberList.add(userFriendBean);
             }
-            UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition).setUserFriendBeanArrayList(newAddedFriendsList);
+
+            UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition).setUserFriendBeanArrayList(newGroupMemberList);
 
             //状态重置
-            for (UserFriendBean userFriendBean: myList) {
+            for (UserFriendBean userFriendBean: myFriendsList) {
                 userFriendBean.setCheck(false);
                 userFriendBean.setInGroup(false);
             }
@@ -497,10 +544,18 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
             switch (msg.what) {
                 case 1:
                     Toast.makeText(GroupCreateActivity.this, R.string.new_group_str_create_success, Toast.LENGTH_SHORT).show();
-                    for (UserFriendBean userFriendBean: myList) {
+                    for (UserFriendBean userFriendBean: myFriendsList) {
                         userFriendBean.setCheck(false);
                     }
                     GroupCreateActivity.this.finish();
+                    break;
+                case 100:
+                    Toast.makeText(GroupCreateActivity.this, "invite friends ok", Toast.LENGTH_SHORT).show();
+                    addGroupMember((TalkCloudApp.InviteUserResp) msg.obj);
+                    break;
+                case 200:
+                    Toast.makeText(GroupCreateActivity.this, "create group ok", Toast.LENGTH_SHORT).show();
+                    createGroup((TalkCloudApp.CreateGroupResp)msg.obj);
                     break;
             }
         };
@@ -509,7 +564,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK && event.getAction() == KeyEvent.ACTION_DOWN) {
-            for (UserFriendBean userFriendBean: myList) {
+            for (UserFriendBean userFriendBean: myFriendsList) {
                 userFriendBean.setCheck(false);
             }
         }

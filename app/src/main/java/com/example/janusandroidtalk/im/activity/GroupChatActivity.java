@@ -32,6 +32,7 @@ import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.bean.UserBean;
+import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.im.view.ChatUiHelper;
 import com.example.janusandroidtalk.im.GroupControll;
 import com.example.janusandroidtalk.im.model.GroupInfo;
@@ -102,6 +103,10 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_groupchat);
+
+        //隐藏悬浮窗
+        FloatActionController.getInstance().hide();
+
         this.mImm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         mWindow = getWindow();
         Intent intent = getIntent();
