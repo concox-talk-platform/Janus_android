@@ -10,6 +10,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -25,6 +26,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.example.janusandroidtalk.MyApplication;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
@@ -40,8 +42,6 @@ import org.json.JSONObject;
 import org.webrtc.MediaStream;
 
 import java.util.ArrayList;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 import talk_cloud.TalkCloudApp;
 
@@ -408,38 +408,17 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
             //创建成功
             JanusControl.sendCreateGroup(GroupCreateActivity.this, (int)(createGroupResp.getGroupInfo().getGid()));
 
-            //初始化新加群成员 FIXME CreateGroupResp 暂时有问题，没有对createGroupResp.getGroupInfo().getUsrListList()赋值
-//            UserGroupBean newGroup = new UserGroupBean();
-//            ArrayList<UserFriendBean> newGroupMemberList = new ArrayList<>();
-//            for (TalkCloudApp.UserRecord userRecord: createGroupResp.getGroupInfo().getUsrListList()) {
-//                UserFriendBean userFriendBean = new UserFriendBean();
-//                userFriendBean.setUserFriendName(userRecord.getName());
-//                userFriendBean.setUserFriendId(userRecord.getUid());
-//                userFriendBean.setOnline(userRecord.getOnline());
-//
-//                newGroupMemberList.add(userFriendBean);
-//            }
-//            System.out.println("CCCCCCCCCCCCCCCCCCC");
-//            System.out.println("size = " + newGroupMemberList.size());
-//            System.out.println("createGroupResp.getGroupInfo().getUsrListList() size = " + createGroupResp.getGroupInfo().getUsrListList().size());
-//
-//            newGroup.setGroupManagerId(createGroupResp.getGroupInfo().getGroupManager());
-//            newGroup.setUserFriendBeanArrayList(newGroupMemberList);
-//            newGroup.setUserGroupId(createGroupResp.getGroupInfo().getGid());
-//            newGroup.setUserGroupName(createGroupResp.getGroupInfo().getGroupName());
-//
-//            System.out.println("BBBBBBBBBBBBBBBBBBBBBBBBBB");
-//            System.out.println("size = " + newGroup.getUserFriendBeanArrayList().size());
-//
-//            UserBean.getUserBean().getUserGroupBeanArrayList().add(newGroup);
-//
-            setResult(RESULT_OK);
+            //初始化新加群成员
+            UserGroupBean newGroup = new UserGroupBean();
+            newGroup.setUserGroupBeanObj(createGroupResp.getGroupInfo());
+            UserBean.getUserBean().getUserGroupBeanArrayList().add(newGroup);
 
-//            UserBean.getUserBean().setOnline(2); // TODO
-            System.out.println("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM");
-            for (UserGroupBean userGroupBean : UserBean.getUserBean().getUserGroupBeanArrayList()) {
-                System.out.println(userGroupBean.getUserGroupName() + " online count = " + userGroupBean.getOnlineMembersCountLocal());
+            //判断是否存在默认进入的群组id，如果没有则默认第一个群组id
+            if(MyApplication.getDefaultGroupId() == 0 && UserBean.getUserBean().getUserGroupBeanArrayList().size() > 0){
+                MyApplication.setDefaultGroupId(UserBean.getUserBean().getUserGroupBeanArrayList().get(0).getUserGroupId());
             }
+
+            setResult(RESULT_OK);
             GroupCreateActivity.this.finish();
         }
     }
@@ -488,6 +467,7 @@ public class GroupCreateActivity extends AppCompatActivity implements MyControlC
             // Updating the Group's UserFriendBeanArrayList
             ArrayList<UserFriendBean> newGroupMemberList = new ArrayList<UserFriendBean>();
             for (TalkCloudApp.UserRecord newGroupMember : inviteUserResp.getUsrListList()) {
+                Log.d("", "------------------------>" + newGroupMember.getOnline());
                 UserFriendBean userFriendBean = new UserFriendBean();
                 // FIXME
                 userFriendBean.setUserFriendId(newGroupMember.getUid());

@@ -28,8 +28,6 @@ import com.example.janusandroidtalk.dialog.CustomProgressDialog;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 
 import java.util.ArrayList;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Future;
 
 import talk_cloud.TalkCloudApp;
 

@@ -1,6 +1,9 @@
 package com.example.janusandroidtalk;
 
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.annotation.NonNull;
@@ -8,6 +11,7 @@ import android.support.design.widget.BottomNavigationView;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.MenuItem;
 import android.widget.Toast;
@@ -17,6 +21,7 @@ import com.example.janusandroidtalk.fragment.FragmentGroup;
 import com.example.janusandroidtalk.fragment.FragmentMine;
 import com.example.janusandroidtalk.gps.LocationService;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
+import com.example.janusandroidtalk.grpcconnectionmanager.ToFragmentListener;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
 import com.example.janusandroidtalk.webrtc.AppRTCAudioManager;
@@ -33,9 +38,15 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
     //当前容器中的fragment
     private Fragment fragment_now = null;
 
+    private ToFragmentListener toFragmentListener;
+    private RealTimeUpdaterTest realTimeUpdaterTest;
+    private IntentFilter intentFilter;
+
     //audioManager
     private AppRTCAudioManager audioManager = null;
     private JanusControl janusControl = null;
+
+    private Intent LocationServiceIntent;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -73,9 +84,20 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
         // 进行webSocket连接
 //        janusControl = new JanusControl(MainActivity.this,MyApplication.getUserName(),MyApplication.getUserId(),MyApplication.getDefaultGroupId());
 //        janusControl.Start();
+
         //启动LocationService
-        Intent intent = new Intent(this, LocationService.class);
-        startService(intent);
+        LocationServiceIntent = new Intent(this, LocationService.class);
+        startService(LocationServiceIntent);
+
+        //实时渲染
+        realTimeUpdaterTest = new RealTimeUpdaterTest();
+        intentFilter = new IntentFilter();
+        intentFilter.addAction("123456");
+
+        registerReceiver(realTimeUpdaterTest, intentFilter);
+
+        handler.removeMessages(100);
+        handler.sendEmptyMessage(100);
     }
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
@@ -95,12 +117,14 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
                     fragmentMine = fragmentMine.newInstance();
                 }
                 switchFragment(fragment_now, fragmentMine);
+                toFragmentListener = fragmentMine;
                 break;
             case R.id.navigation_group:
                 if (fragmentGroup == null){
                     fragmentGroup = fragmentGroup.newInstance();
                 }
                 switchFragment(fragment_now, fragmentGroup);
+                toFragmentListener = fragmentGroup;
                 break;
         }
     }
@@ -134,6 +158,9 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
                 JanusControl.closeJanusServer();
                 GrpcConnectionManager.closeGrpcConnectionManager();
                 FloatActionController.getInstance().stopMonkServer(this);
+
+                unregisterReceiver(realTimeUpdaterTest);
+
                 finish();
             }
             return false;
@@ -153,6 +180,19 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
             FloatActionController.getInstance().show();
         }
 
+        registerReceiver(realTimeUpdaterTest, intentFilter);
+    }
+
+    private class RealTimeUpdaterTest extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String intentAction = intent.getAction();
+            if (intentAction.equals("123456")) {
+                Log.d("test","--------------------------------------> this is test MainActivity get message from broadcast");
+                toFragmentListener.dynamicTransfer("Refresh Page Now!!!");
+            }
+        }
     }
 
     @Override
@@ -164,6 +204,14 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
             audioManager.close();
             audioManager = null;
         }
+
+        stopService(LocationServiceIntent);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        unregisterReceiver(realTimeUpdaterTest);
     }
 
     @Override
@@ -203,14 +251,26 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
 
     }
 
+    private void sendReceiverBroadcast() {
+        Intent intent = new Intent();
+        intent.setAction("123456");
+        sendBroadcast(intent);
+    }
+
     private Handler handler = new Handler() {
+        @Override
         public void handleMessage(android.os.Message msg) {
+            super.handleMessage(msg);
             switch (msg.what) {
                 case 0:
                     //Toast.makeText(MainActivity.this,"webSocket连接成功",Toast.LENGTH_SHORT).show();
                     break;
                 case 1:
                     //Toast.makeText(MainActivity.this,"webSocket连接失败",Toast.LENGTH_SHORT).show();
+                    break;
+                case 100: // Refresh
+                    sendReceiverBroadcast();
+                    handler.sendEmptyMessageDelayed(100, 6*1000);
                     break;
             }
         };

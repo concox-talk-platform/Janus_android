@@ -85,14 +85,7 @@ public class UserFriendBean implements Serializable {
         this.userFriendName = userRecord.getName();
         this.userFriendId = userRecord.getUid();
         this.groupRole = userRecord.getGrpRole();
-
-
-        if (userRecord.getUid() == UserBean.getUserBean().getUserId()) { //TODO
-            this.online = 2;
-        } else {
-            this.online = userRecord.getOnline();
-        }
-        // FIXME
+        this.online = userRecord.getOnline();
     }
 
     public void setUserFriendBeanObjByFriendRecord(TalkCloudApp.FriendRecord friendRecord) {

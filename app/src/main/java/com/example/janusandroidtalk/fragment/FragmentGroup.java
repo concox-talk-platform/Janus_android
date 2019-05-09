@@ -11,6 +11,7 @@ import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,11 +25,11 @@ import com.example.janusandroidtalk.activity.GroupActivity;
 import com.example.janusandroidtalk.activity.GroupCreateActivity;
 import com.example.janusandroidtalk.activity.SearchActivity;
 import com.example.janusandroidtalk.bean.UserBean;
-import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.floatwindow.permission.FloatPermissionManager;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
+import com.example.janusandroidtalk.grpcconnectionmanager.ToFragmentListener;
 import com.example.janusandroidtalk.im.activity.GroupChatActivity;
 import com.example.janusandroidtalk.pullrecyclerview.BaseRecyclerAdapter;
 import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
@@ -48,7 +49,7 @@ import talk_cloud.TalkCloudApp;
 
 import static android.app.Activity.RESULT_OK;
 
-public class FragmentGroup extends Fragment implements MyControlCallBack{
+public class FragmentGroup extends Fragment implements MyControlCallBack, ToFragmentListener {
 
     private PullRecyclerView mPullRecyclerView;
     private ArrayList<UserGroupBean> myGroupsList = new ArrayList<>();
@@ -148,6 +149,15 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
 //                startActivity(intent);
             }
         });
+    }
+
+
+    //TODO TEST!!!
+    @Override
+    public void dynamicTransfer(String message) {
+//        Log.d("test","--------------------------------------> this is test 群组自动刷新了！！！" + message);
+        Toast.makeText(getContext(), "群组自动刷新了！！！", Toast.LENGTH_SHORT).show();
+        handleUpdateGroupInfoBack();
     }
 
     // Updating groups' info. Attentions someone invited you into a group, so we need pull user's groups info from server and update local
@@ -375,6 +385,8 @@ public class FragmentGroup extends Fragment implements MyControlCallBack{
         myGroupsList.addAll(UserBean.getUserBean().getUserGroupBeanArrayList());
         mGroupListAdapter.notifyDataSetChanged();
     }
+
+
 
     private Handler handler = new Handler() {
         public void handleMessage(android.os.Message msg) {

@@ -10,6 +10,7 @@ import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,6 +30,7 @@ import com.example.janusandroidtalk.bean.UserBean;
 import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
+import com.example.janusandroidtalk.grpcconnectionmanager.ToFragmentListener;
 import com.example.janusandroidtalk.pullrecyclerview.BaseRecyclerAdapter;
 import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
@@ -44,7 +46,7 @@ import java.util.List;
 
 import talk_cloud.TalkCloudApp;
 
-public class FragmentMine extends Fragment implements MyControlCallBack {
+public class FragmentMine extends Fragment implements MyControlCallBack, ToFragmentListener {
 
     private PullRecyclerView mPullRecyclerView;
     private List<UserFriendBean> friendsList = new ArrayList<>();
@@ -56,7 +58,6 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
     private String name;
     private int remoteId;
     private boolean isVideo;
-
 
     public FragmentMine() {
 
@@ -140,6 +141,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
                                 JanusControl.closeWebRtc();
                                 JanusControl.closeJanusServer();
                                 GrpcConnectionManager.closeGrpcConnectionManager();
+
                                 Intent intent = new Intent(getActivity(),LoginActivity.class);
                                 getActivity().startActivity(intent);
                                 getActivity().finish();
@@ -154,6 +156,15 @@ public class FragmentMine extends Fragment implements MyControlCallBack {
                 dialog.show();
             }
         });
+
+    }
+
+    //TODO TEST!!!
+    @Override
+    public void dynamicTransfer(String message) {
+//        Log.d("test","--------------------------------------> this is test 好友自动刷新了！！！" + message);
+        Toast.makeText(getContext(), "好友自动刷新了！！！", Toast.LENGTH_SHORT).show();
+        handleUpdateFriendsInfoBack();
     }
 
     //Updating friends' info

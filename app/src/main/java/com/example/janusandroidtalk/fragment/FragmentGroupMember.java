@@ -104,7 +104,9 @@ public class FragmentGroupMember extends Fragment{
         //第一次进来发起请求
         if (UserBean.getUserBean() != null) {
             mPullRecyclerView.postRefreshing();
+            currentGroup = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
             groupMemberList = currentGroup.getUserFriendBeanArrayList();
+            groupMemberListAdapter.notifyDataSetChanged();
             mPullRecyclerView.stopRefresh();
         }
 
