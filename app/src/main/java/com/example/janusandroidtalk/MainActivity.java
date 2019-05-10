@@ -19,6 +19,7 @@ import com.example.janusandroidtalk.gps.LocationService;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
+import com.example.janusandroidtalk.tools.AppTools;
 import com.example.janusandroidtalk.webrtc.AppRTCAudioManager;
 
 import org.json.JSONException;
@@ -74,8 +75,10 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
 //        janusControl = new JanusControl(MainActivity.this,MyApplication.getUserName(),MyApplication.getUserId(),MyApplication.getDefaultGroupId());
 //        janusControl.Start();
         //启动LocationService
-        Intent intent = new Intent(this, LocationService.class);
-        startService(intent);
+        if(!AppTools.isServiceRunning(this,"LocationService")){
+            Intent intent = new Intent(this, LocationService.class);
+            startService(intent);
+        }
     }
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener

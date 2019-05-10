@@ -102,7 +102,7 @@ public class LocationService extends Service {
 
     private HashMap<String, Object> getLocationData(DeviceInfo dInfo, GPSInfo gpsInfo, WifiData wifiInfo, BaseStationInfo bsInfo,BluetoothInfo btInfo) {
         HashMap<String, Object> map = new HashMap<String, Object>();
-        Device device = Device.newBuilder().setId(334).setBattery(dInfo.getBattery()).setDeviceType(dInfo.getType()).build();
+        Device device = Device.newBuilder().setId(UserBean.getUserBean().getUserId()).setBattery(dInfo.getBattery()).setDeviceType(dInfo.getType()).build();
         GPS gps = GPS.newBuilder().setLocalTime(gpsInfo.getTime()).setLatitude(gpsInfo.getLatitude()).setLongitude(gpsInfo.getLongitude()).setSpeed(gpsInfo.getSpeed())
                 .setCourse(gpsInfo.getBearing()).build();
         BaseStation bStation = BaseStation.newBuilder().setCountry(bsInfo.getMcc()).setOperator(bsInfo.getMnc()).setCid(bsInfo.getCid()).setLac(bsInfo.getLac())

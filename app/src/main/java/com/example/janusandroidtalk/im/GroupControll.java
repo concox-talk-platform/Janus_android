@@ -93,17 +93,7 @@ public class GroupControll {
             }
         }
     }
-    /*public String getSendUserName(int id){
-        Log.d(TAG,TAG+" getSendUserName id="+id);
-        if(groupUsers!=null&&groupUsers.size()>0){
-            for (int i=0;i<groupUsers.size();i++){
-                if(groupUsers.get(i).getUserId()==id){
-                    return groupUsers.get(i).getName();
-                }
-            }
-        }
-        return null;
-    }*/
+
     public void setOnGroupInfoListener(OnGroupInfoListener listener){
         gListener = listener;
     }
@@ -127,7 +117,7 @@ public class GroupControll {
                 Log.d(TAG,TAG+" this is ChatTextTask doInBackground receive="+message.getReceiveId()+" msgid="+message.getMsgId());
                 channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
                 TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.ImMsgReqData data = TalkCloudApp.ImMsgReqData.newBuilder().setId(userId).setSendTime(message.getFromUser().getDisplayName()).
+                TalkCloudApp.ImMsgReqData data = TalkCloudApp.ImMsgReqData.newBuilder().setId(userId).setSenderName(message.getFromUser().getDisplayName()).
                         setReceiverId(message.getReceiveId()).setReceiverType(2).setMsgType(1).setMsgCode(message.getMsgId()).setResourcePath(message.getText()).setSendTime(message.getTimeString()).build();
                 reply = stub.imMessagePublish(data);
                 Log.d(TAG,TAG+" this is ChatTextTask doInBackground 2222 ...");

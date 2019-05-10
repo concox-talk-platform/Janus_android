@@ -166,6 +166,14 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
      */
     private void modifyMsgStatus(boolean b,String msgId){
         ChatMessage message = mDbManager.getRecordForMsgId(msgId);
+        if(message.getType()==IMessage.MessageType.RECEIVE_IMAGE.ordinal()||
+                message.getType()==IMessage.MessageType.SEND_IMAGE.ordinal()){
+            for(int i=0;i<mMsgIdList.size();i++){
+                if(mMsgIdList.get(i).equals(msgId)){
+                    mMsgIdList.set(i,message.getMsgId());
+                }
+            }
+        }
         if(b){
             message.setMessageStatus(IMessage.MessageStatus.SEND_SUCCEED);
             mAdapter.updateMessage(msgId,message);
@@ -574,7 +582,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         imageMessage.setReceiveName(mUserGroupName);
         mAdapter.addToStart(imageMessage, true);
         mDbManager.addRecord(imageMessage);
-        Toast.makeText(this, "发送图片", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, "发送图片 msgid="+imageMessage.getMsgId(), Toast.LENGTH_SHORT).show();
         new GroupControll.ChatTask().execute(imageMessage);
     }
 
