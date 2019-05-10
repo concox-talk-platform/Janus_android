@@ -1,12 +1,16 @@
 package com.example.janusandroidtalk.gps;
 
+import android.Manifest;
 import android.content.Context;
 import android.net.wifi.ScanResult;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import pub.devrel.easypermissions.EasyPermissions;
 
 public class WifiControll {
     private WifiManager mWifiManager = null;
@@ -30,6 +34,10 @@ public class WifiControll {
                         }
                         Toast.makeText(LocationService.this, "rssi="+rssi+" strength＝"+strength, Toast.LENGTH_SHORT).show();
                     }*/
+        if(!EasyPermissions.hasPermissions(mContext, Manifest.permission.ACCESS_FINE_LOCATION)&&!EasyPermissions.hasPermissions(mContext,Manifest.permission.ACCESS_COARSE_LOCATION)){
+            Log.d("location","LocationService 没有wifi搜索权限");
+            return wifiList;
+        }
         List<ScanResult> scanResults=mWifiManager.getScanResults();
         for (ScanResult scanResult : scanResults) {
                         /*tv.append("\n设备名："+scanResult.SSID

@@ -24,6 +24,7 @@ import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 import com.example.janusandroidtalk.grpcconnectionmanager.ToFragmentListener;
 import com.example.janusandroidtalk.signalingcontrol.JanusControl;
 import com.example.janusandroidtalk.signalingcontrol.MyControlCallBack;
+import com.example.janusandroidtalk.tools.AppTools;
 import com.example.janusandroidtalk.webrtc.AppRTCAudioManager;
 
 import org.json.JSONException;
@@ -45,8 +46,6 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
     //audioManager
     private AppRTCAudioManager audioManager = null;
     private JanusControl janusControl = null;
-
-    private Intent LocationServiceIntent;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -86,8 +85,10 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
 //        janusControl.Start();
 
         //启动LocationService
-        LocationServiceIntent = new Intent(this, LocationService.class);
-        startService(LocationServiceIntent);
+        if(!AppTools.isServiceRunning(this,"LocationService")){
+            Intent intent = new Intent(this, LocationService.class);
+            startService(intent);
+        }
 
         //实时渲染
         realTimeUpdaterTest = new RealTimeUpdaterTest();
@@ -204,8 +205,6 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
             audioManager.close();
             audioManager = null;
         }
-
-        stopService(LocationServiceIntent);
     }
 
     @Override

@@ -72,14 +72,12 @@ public class ReceiveServerData extends Thread {
                         Log.d(TAG, TAG + " this is StreamObserver onNext and msgType = " + msgType);
                         if (mDbManager != null) {
                             if (msgType == 1) {//接收文字
-                                Log.d(TAG, TAG + " this is StreamObserver receive text  1111");
                                 message.setType(IMessage.MessageType.RECEIVE_TEXT.ordinal());
                                 message.setText(value.getImMsgData().getResourcePath());
                                 long id = mDbManager.addRecord(message);
                                 sendReceiverBroadcast(id);
                             }
                             if (msgType == 2 || msgType == 3 || msgType == 4) {
-                                Log.d(TAG, TAG + " this is StreamObserver receive text  2222222222");
                                 if (msgType == 2)//接收图片
                                     message.setType(IMessage.MessageType.RECEIVE_IMAGE.ordinal());
                                 if (msgType == 3)//接收语音
@@ -174,13 +172,15 @@ public class ReceiveServerData extends Thread {
             @Override
             public void onError(Throwable t) {
                 Log.d(TAG, TAG + " this is StreamObserver onError and " + t.getMessage());
-                //close(channel);
+                close(channel);
+                restart();
             }
 
             @Override
             public void onCompleted() {
                 Log.d(TAG, TAG + " this is StreamObserver onCompleted");
-                //close(channel);
+                close(channel);
+                restart();
             }
         };
         StreamObserver<TalkCloudApp.StreamRequest> request = stub.dataPublish(response);
@@ -211,5 +211,10 @@ public class ReceiveServerData extends Thread {
         intent.setAction("com_jimi_chat_updatedata");
         intent.putExtra("id", id);
         MyApplication.getContext().sendBroadcast(intent);
+    }
+
+    private void restart(){
+        Log.d(TAG, TAG + " this is StreamObserver and restart --------------start");
+        new ReceiveServerData().start();
     }
 }
