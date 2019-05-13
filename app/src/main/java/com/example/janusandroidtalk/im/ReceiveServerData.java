@@ -89,9 +89,11 @@ public class ReceiveServerData extends Thread {
                                 message.setMediaFilePath(destFileDir + "/" + str[str.length - 1]);
                                 //long id = mDbManager.addRecord(message);
                                 //download(value.getImMsgData().getResourcePath(),str[str.length-1],message);
+                                //图片、语音、视频
                                 DownloadManager.getInstance().downloadFile(value.getImMsgData().getResourcePath(), str[str.length - 1], message, new DownloadManager.OnDownloadListener() {
                                     @Override
                                     public void onDownloadSuccess(ChatMessage msg) {
+                                        //下载成功
                                         msg.setDuration(MediaUtil.getDuration(new File(msg.getMediaFilePath())));
                                         long id = mDbManager.addRecord(msg);
                                         sendReceiverBroadcast(id);
@@ -99,11 +101,12 @@ public class ReceiveServerData extends Thread {
 
                                     @Override
                                     public void onDownloading(int progress) {
-
+                                        //下载中
                                     }
 
                                     @Override
                                     public void onDownloadFailed(ChatMessage msg) {
+                                        //下载失败
                                         long id = mDbManager.addRecord(msg);
                                         sendReceiverBroadcast(id);
                                     }
@@ -144,9 +147,11 @@ public class ReceiveServerData extends Thread {
                                 chatMessage.setMediaFilePath(destFileDir + "/" + str[str.length - 1]);
                                 //long id = mDbManager.addRecord(message);
                                 //download(groupData.getResourcePath(),str[str.length-1],chatMessage);
+                                //图片、语音、视频下载
                                 DownloadManager.getInstance().downloadFile(groupData.getResourcePath(), str[str.length - 1], chatMessage, new DownloadManager.OnDownloadListener() {
                                     @Override
                                     public void onDownloadSuccess(ChatMessage msg) {
+                                        //下载成功
                                         msg.setDuration(MediaUtil.getDuration(new File(msg.getMediaFilePath())));
                                         long id = mDbManager.addRecord(msg);
                                         sendReceiverBroadcast(id);
@@ -154,11 +159,12 @@ public class ReceiveServerData extends Thread {
 
                                     @Override
                                     public void onDownloading(int progress) {
-
+                                        //下载中
                                     }
 
                                     @Override
                                     public void onDownloadFailed(ChatMessage msg) {
+                                        //下载失败
                                         long id = mDbManager.addRecord(msg);
                                         sendReceiverBroadcast(id);
                                     }
@@ -206,6 +212,7 @@ public class ReceiveServerData extends Thread {
         }
     }
 
+    //发送广播通知接收到消息
     private void sendReceiverBroadcast(long id) {
         Intent intent = new Intent();
         intent.setAction("com_jimi_chat_updatedata");
@@ -213,6 +220,7 @@ public class ReceiveServerData extends Thread {
         MyApplication.getContext().sendBroadcast(intent);
     }
 
+    //重新连接服务器
     private void restart(){
         Log.d(TAG, TAG + " this is StreamObserver and restart --------------start");
         new ReceiveServerData().start();

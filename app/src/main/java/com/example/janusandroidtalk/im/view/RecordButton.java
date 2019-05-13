@@ -27,6 +27,9 @@ import com.example.janusandroidtalk.R;
 
 import java.io.File;
 
+/**
+ * 录音按钮
+ */
 public class RecordButton extends android.support.v7.widget.AppCompatButton {
 
 
@@ -113,25 +116,25 @@ public class RecordButton extends android.support.v7.widget.AppCompatButton {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         if (ActivityCompat.checkSelfPermission(getContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(getContext(), "没有录音权限", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.no_record_permission, Toast.LENGTH_SHORT).show();
             return false;
         }
         int action = event.getAction();
         y = event.getY();
         if(mStateTV!=null && mStateIV!=null &&y<0){
-            mStateTV.setText("松开手指,取消发送");
+            mStateTV.setText(R.string.release_record_cancel_sending);
             mStateIV.setImageDrawable(getResources().getDrawable(R.drawable.ic_volume_cancel));
         }else if(mStateTV != null){
-            mStateTV.setText("手指上滑,取消发送");
+            mStateTV.setText(R.string.slip_record_cancel_sending);
         }
         switch (action) {
             case MotionEvent.ACTION_DOWN:
-                setText("松开发送");
+                setText(R.string.release_record_sending);
                 initDialogAndStartRecord();
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                this.setText("按住录音");
+                this.setText(R.string.press_and_hold_record);
                  if(y>=0 && (System.currentTimeMillis() - startTime <= MAX_INTERVAL_TIME)){
                     finishRecord();
 
@@ -160,7 +163,7 @@ public class RecordButton extends android.support.v7.widget.AppCompatButton {
          mStateIV.setVisibility(View.VISIBLE);
          //mStateIV.setImageResource(R.drawable.ic_volume_1);
          mStateTV.setVisibility(View.VISIBLE);
-         mStateTV.setText("手指上滑,取消发送");
+         mStateTV.setText(R.string.slip_record_cancel_sending);
          recordDialog.setContentView(view, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
@@ -180,7 +183,7 @@ public class RecordButton extends android.support.v7.widget.AppCompatButton {
             volumeHandler.sendEmptyMessageDelayed(-100, 500);
              //view.setBackgroundResource(R.drawable.ic_voice_cancel);
             mStateIV.setImageDrawable(getResources().getDrawable(R.drawable.ic_volume_wraning));
-            mStateTV.setText("录音时间太短");
+            mStateTV.setText(R.string.record_time_too_short);
             anim.stop();
             File file = new File(mFile);
             file.delete();

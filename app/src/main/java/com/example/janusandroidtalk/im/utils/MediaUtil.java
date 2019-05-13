@@ -10,6 +10,11 @@ import java.io.IOException;
 
 public class MediaUtil {
 
+    /**
+     * 获取语音、视频的时长
+     * @param source   文件的路径
+     * @return
+     */
     public static int getDuration(File source) {
         int duration = 0;
         Uri uri = Uri.fromFile(source);

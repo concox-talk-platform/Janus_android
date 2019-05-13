@@ -2,24 +2,23 @@ package com.example.janusandroidtalk.im.model;
 
 import java.util.HashMap;
 import java.util.UUID;
-
 import cn.jiguang.imui.commons.models.IMessage;
 import cn.jiguang.imui.commons.models.IUser;
 
 
 public class ChatMessage implements IMessage {
 
-    private long id;
-    private String text;
-    private String timeString;
-    private int type;
-    private IUser user;
-    private String mediaFilePath;
-    private long duration;
+    private long id;//message的id
+    private String text;//文字
+    private String timeString;//时间
+    private int type;//类型
+    private IUser user;//用户
+    private String mediaFilePath;//资源路径
+    private long duration;//持续时间,语音、视频的时长
     private String progress;
-    private MessageStatus mMsgStatus = MessageStatus.CREATED;
-    private int receiveId;
-    private String receiveName;
+    private MessageStatus mMsgStatus = MessageStatus.CREATED;//发送的状态
+    private int receiveId;//接收者id
+    private String receiveName;//接收者名字
 
     public ChatMessage() {
         this.id = UUID.randomUUID().getLeastSignificantBits();

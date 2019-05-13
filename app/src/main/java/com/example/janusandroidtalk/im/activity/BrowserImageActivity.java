@@ -42,6 +42,7 @@ public class BrowserImageActivity extends Activity {
         mMsgIdList = getIntent().getStringArrayListExtra("idList");
         mViewPager = (ImgBrowserViewPager) findViewById(R.id.img_browser_viewpager);
         DisplayMetrics dm = getResources().getDisplayMetrics();
+        //获取屏幕宽高
         mWidth = dm.widthPixels;
         mHeight = dm.heightPixels;
 
@@ -66,9 +67,11 @@ public class BrowserImageActivity extends Activity {
                 if (file.exists()) {
                     bitmap = BitmapLoader.getBitmapFromFile(path, mWidth, mHeight);
                     if (bitmap != null) {
+                        //显示图片
                         photoView.setImageBitmap(bitmap);
                         mCache.put(path, bitmap);
                     } else {
+                        //没图片时的默认页面
                         photoView.setImageResource(R.drawable.aurora_picture_not_found);
                     }
                 } else {

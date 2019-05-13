@@ -98,6 +98,9 @@ public class GroupControll {
         gListener = listener;
     }
 
+    /**
+     * 回调通知发送者发送的结果
+     */
     public interface OnGroupInfoListener{
         void OnGroupInfo(GroupInfo info);
         void OnTextMsg(boolean b,String msgId);

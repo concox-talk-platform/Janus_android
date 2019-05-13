@@ -24,6 +24,7 @@ public class VideoActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_video);
 
+        //获取视频路径
         String videoPath = getIntent().getStringExtra(VIDEO_PATH);
 
         mVideoView = (VideoView) findViewById(R.id.videoview_video);
@@ -72,11 +73,13 @@ public class VideoActivity extends Activity {
         pause();
     }
 
+    //播放视频
     private void play() {
         mVideoView.start();
         mVideoView.setKeepScreenOn(true);
     }
 
+    //暂停视频
     private void pause() {
         mVideoView.pause();
         mVideoView.setKeepScreenOn(false);

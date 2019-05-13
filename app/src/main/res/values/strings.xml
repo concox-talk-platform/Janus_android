@@ -74,5 +74,13 @@
     <string name="group_im_button">即时通信</string>
     <string name="group_member_button">群成员</string>
     <string name="group_talk_history_button">历史对讲</string>
+    
+    <string name="no_record_permission">没有录音权限</string>
+    <string name="release_record_cancel_sending">松开手指,取消发送</string>
+    <string name="slip_record_cancel_sending">手指上滑,取消发送</string>
+    <string name="release_record_sending">松开发送</string>
+    <string name="press_and_hold_record">按住录音</string>
+    <string name="record_time_too_short">录音时间太短</string>
+
 
 </resources>

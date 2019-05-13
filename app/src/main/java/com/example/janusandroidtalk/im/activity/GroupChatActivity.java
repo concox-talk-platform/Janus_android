@@ -76,7 +76,6 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
     private EditText mEtContent;
     private RelativeLayout mRlBottomLayout;//表情,添加底部布局
     private ImageView mIvAdd;
-    private ImageView mIvEmo;
     private StateButton mBtnSend;//发送按钮
     private ImageView mIvAudio;//录音图片
     private RecordButton mBtnAudio;//录音按钮
@@ -88,10 +87,8 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
 
     private static final int REQUEST_CODE_IMAGE = 1001;
     private static final int REQUEST_CODE_VEDIO = 1002;
-    /**
-     * Store all image messages' path, pass it to {@link BrowserImageActivity},
-     * so that click image message can browser all images.
-     */
+
+    //存储所有图像消息的路径，将其传递给BrowserImageActivity以便单击图像消息可以浏览所有图像
     private ArrayList<String> mPathList = new ArrayList<>();
     private ArrayList<String> mMsgIdList = new ArrayList<>();
 
@@ -106,7 +103,6 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
 
         //隐藏悬浮窗
         FloatActionController.getInstance().hide();
-
         this.mImm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         mWindow = getWindow();
         Intent intent = getIntent();
@@ -273,14 +269,14 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         ImageLoader imageLoader = new ImageLoader() {
             @Override
             public void loadAvatarImage(ImageView avatarImageView, String string) {
-                // You can use other image load libraries.
-                //Toast.makeText(GroupChatActivity.this, "loadAvatarImage string="+string, Toast.LENGTH_SHORT).show();
+                //加载头像图片
                 if (string.contains("R.drawable")) {
                     Integer resId = getResources().getIdentifier(string.replace("R.drawable.", ""),
                             "drawable", getPackageName());
 
                     avatarImageView.setImageResource(resId);
                 } else {
+                    //默认头像
                     Glide.with(GroupChatActivity.this)
                             .load(string)
                             .apply(new RequestOptions().placeholder(R.drawable.aurora_headicon_default))
@@ -289,14 +285,13 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
             }
 
             /**
-             * Load image message
-             * @param imageView Image message's ImageView.
-             * @param string A file path, or a uri or url.
+             * 加载图片
+             * @param imageView 要加载图片的控件
+             * @param string 文件路径
              */
             @Override
             public void loadImage(final ImageView imageView, String string) {
                 //Toast.makeText(GroupChatActivity.this, "this is loadImage", Toast.LENGTH_SHORT).show();
-                // You can use other image load libraries.
                 Glide.with(getApplicationContext())
                         .asBitmap()
                         .load(string)
@@ -359,9 +354,9 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
             }
 
             /**
-             * Load video message
-             * @param imageCover Video message's image cover
-             * @param uri Local path or url.
+             * 加载视频
+             * @param imageCover 视频消息的图像封面
+             * @param uri 视频路径
              */
             @Override
             public void loadVideo(ImageView imageCover, String uri) {
@@ -371,7 +366,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
                         .asBitmap()
                         .load(uri)
                         // Resize image view by change override size.
-                        .apply(new RequestOptions().frame(interval).override(100, 150))
+                        .apply(new RequestOptions().frame(interval).override(100, 150))//视频图像显示的大小with:100,height:150
                         .into(imageCover);
             }
         };
@@ -382,7 +377,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         mAdapter.setOnMsgClickListener(new MsgListAdapter.OnMsgClickListener<ChatMessage>() {
             @Override
             public void onMessageClick(ChatMessage message) {
-                // do something
+                // 点击消息事件
                 if (message.getType() == IMessage.MessageType.RECEIVE_VIDEO.ordinal()
                         || message.getType() == IMessage.MessageType.SEND_VIDEO.ordinal()) {//视频播放
                     if (!TextUtils.isEmpty(message.getMediaFilePath())) {
@@ -422,7 +417,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         mAdapter.setMsgStatusViewClickListener(new MsgListAdapter.OnMsgStatusViewClickListener<ChatMessage>() {
             @Override
             public void onStatusViewClick(ChatMessage message) {
-                // message status view click, resend or download here
+                // 这里是消息状态的点击事件,可以在此处做重新发送处理
             }
         });
 
@@ -446,10 +441,10 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         });
 
         mChatView.setAdapter(mAdapter);
-        mAdapter.getLayoutManager().scrollToPosition(0);
-        //mRvChat.smoothScrollToPosition(mAdapter.getItemCount() - 1);
+        mAdapter.getLayoutManager().scrollToPosition(0);//滑动到底部
     }
 
+    //下一页,暂时没做分页处理
     private void loadNextPage() {
         new Handler().postDelayed(new Runnable() {
             @Override
@@ -466,6 +461,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         switch (motionEvent.getAction()) {
             case MotionEvent.ACTION_DOWN:
                 try {
+                    //触摸事件,隐藏键盘
                     View v = getCurrentFocus();
                     if (mImm != null && v != null) {
                         mImm.hideSoftInputFromWindow(v.getWindowToken(), 0);
@@ -517,6 +513,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.btn_send:
+                //发送文字,同时清空编辑框
                 sendTextMsg(mEtContent.getText().toString());
                 mEtContent.setText("");
                 break;
@@ -527,9 +524,11 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
                 PictureFileUtil.openGalleryAudio(GroupChatActivity.this, REQUEST_CODE_VEDIO);//视频选择器
                 break;
             case R.id.rlFile:
+                //这里是文件发送按钮
                 //PictureFileUtil.openFile(ChatActivity.this,REQUEST_CODE_FILE);
                 break;
             case R.id.rlLocation:
+                //发送位置
                 break;
         }
     }
@@ -547,7 +546,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         textMessage.setReceiveId(mUserGroupId);
         mAdapter.addToStart(textMessage, true);
         mDbManager.addRecord(textMessage);
-        Toast.makeText(this, "发送文本", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "发送文本", Toast.LENGTH_SHORT).show();
         new GroupControll.ChatTextTask().execute(textMessage);
     }
 
@@ -567,7 +566,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         voiceMessage.setReceiveName(mUserGroupName);
         mAdapter.addToStart(voiceMessage, true);
         mDbManager.addRecord(voiceMessage);
-        Toast.makeText(this, "发送语音", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "发送语音", Toast.LENGTH_SHORT).show();
         new GroupControll.ChatTask().execute(voiceMessage);
     }
 
@@ -587,7 +586,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         imageMessage.setReceiveName(mUserGroupName);
         mAdapter.addToStart(imageMessage, true);
         mDbManager.addRecord(imageMessage);
-        Toast.makeText(this, "发送图片 msgid="+imageMessage.getMsgId(), Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "发送图片 msgid="+imageMessage.getMsgId(), Toast.LENGTH_SHORT).show();
         new GroupControll.ChatTask().execute(imageMessage);
     }
 
@@ -608,7 +607,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         vedioMessage.setReceiveName(mUserGroupName);
         mAdapter.addToStart(vedioMessage, true);
         mDbManager.addRecord(vedioMessage);
-        Toast.makeText(this, "发送视频", Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "发送视频", Toast.LENGTH_SHORT).show();
         new GroupControll.ChatTask().execute(vedioMessage);
     }
 
