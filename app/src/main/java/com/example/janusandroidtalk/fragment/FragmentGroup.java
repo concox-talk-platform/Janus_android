@@ -155,8 +155,7 @@ public class FragmentGroup extends Fragment implements MyControlCallBack, ToFrag
     //TODO TEST!!!
     @Override
     public void dynamicTransfer(String message) {
-//        Log.d("test","--------------------------------------> this is test 群组自动刷新了！！！" + message);
-        Toast.makeText(getContext(), "群组自动刷新了！！！", Toast.LENGTH_SHORT).show();
+        Log.d("FragmentGroup", "群组自动刷新了！！！");
         handleUpdateGroupInfoBack();
     }
 

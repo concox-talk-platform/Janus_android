@@ -136,9 +136,9 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         if (!to.isAdded()) {
             if (from == null) {
-                transaction.add(R.id.frame_layout, to).show(to).commit();
+                transaction.add(R.id.activity_main_frame_layout, to).show(to).commit();
             } else {
-                transaction.hide(from).add(R.id.frame_layout, to).commitAllowingStateLoss();
+                transaction.hide(from).add(R.id.activity_main_frame_layout, to).commitAllowingStateLoss();
             }
         } else {
             transaction.hide(from).show(to).commit();
@@ -175,8 +175,8 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
     }
 
     @Override
-    protected void onRestart() {
-        super.onRestart();
+    protected void onStart() {
+        super.onStart();
         if(FloatActionController.getInstance() != null && !FloatActionController.getInstance().isShow()){
             FloatActionController.getInstance().show();
         }
@@ -190,7 +190,7 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
         public void onReceive(Context context, Intent intent) {
             String intentAction = intent.getAction();
             if (intentAction.equals("123456")) {
-                Log.d("test","--------------------------------------> this is test MainActivity get message from broadcast");
+                Log.d("MainActivity"," this is test RealTimeUpdaterTest onReceive get message from broadcast");
                 toFragmentListener.dynamicTransfer("Refresh Page Now!!!");
             }
         }
@@ -269,7 +269,7 @@ public class MainActivity extends AppCompatActivity implements MyControlCallBack
                     break;
                 case 100: // Refresh
                     sendReceiverBroadcast();
-                    handler.sendEmptyMessageDelayed(100, 6*1000);
+                    handler.sendEmptyMessageDelayed(100, 2*1000);
                     break;
             }
         };

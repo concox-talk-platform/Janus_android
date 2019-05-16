@@ -3,20 +3,17 @@ package com.example.janusandroidtalk.im;
 import android.os.AsyncTask;
 import android.util.Log;
 
+import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 import com.example.janusandroidtalk.im.model.ChatMessage;
 import com.example.janusandroidtalk.im.model.GroupInfo;
 import com.example.janusandroidtalk.im.model.GroupUser;
-import com.example.janusandroidtalk.tools.AppTools;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
-import io.grpc.ManagedChannel;
-import io.grpc.ManagedChannelBuilder;
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
@@ -24,10 +21,9 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import talk_cloud.TalkCloudApp;
-import talk_cloud.TalkCloudGrpc;
 
 public class GroupControll {
-    private final static String TAG = "GroupControll";
+    private final static String TAG = "GroupControll";// TODO Don't do like this
     private static OnGroupInfoListener gListener;
     GroupInfo info = new GroupInfo();
     ArrayList<GroupUser> groupUsers = new ArrayList<GroupUser>();
@@ -46,17 +42,14 @@ public class GroupControll {
     }
 
     class GroupInfoTask extends AsyncTask<ArrayList,Void, TalkCloudApp.GetGroupInfoResp>{
-        private ManagedChannel channel;
         private TalkCloudApp.GetGroupInfoResp reply = null;
         @Override
         protected TalkCloudApp.GetGroupInfoResp doInBackground(ArrayList... arrayLists) {
             int groupId = (int)arrayLists[0].get(0);
             int userid = (int)arrayLists[0].get(1);
             try{
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
                 TalkCloudApp.GetGroupInfoReq resp = TalkCloudApp.GetGroupInfoReq.newBuilder().setGid(groupId).setUid(userid).build();
-                reply = stub.getGroupInfo(resp);
+                reply = GrpcConnectionManager.getInstance().getBlockingStub().getGroupInfo(resp);
                 return reply;
             }catch (Exception e){
                 return reply;
@@ -109,8 +102,6 @@ public class GroupControll {
 
     //文字上传
     public static class ChatTextTask extends AsyncTask<ChatMessage,Void, TalkCloudApp.ImMsgRespData>{
-
-        private ManagedChannel channel;
         private TalkCloudApp.ImMsgRespData reply = null;
         @Override
         protected TalkCloudApp.ImMsgRespData doInBackground(ChatMessage... chatMessages) {
@@ -118,11 +109,18 @@ public class GroupControll {
             int userId = Integer.valueOf(message.getFromUser().getId());
             try{
                 Log.d(TAG,TAG+" this is ChatTextTask doInBackground receive="+message.getReceiveId()+" msgid="+message.getMsgId());
-                channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
-                TalkCloudGrpc.TalkCloudBlockingStub stub = TalkCloudGrpc.newBlockingStub(channel);
-                TalkCloudApp.ImMsgReqData data = TalkCloudApp.ImMsgReqData.newBuilder().setId(userId).setSenderName(message.getFromUser().getDisplayName()).
-                        setReceiverId(message.getReceiveId()).setReceiverType(2).setMsgType(1).setMsgCode(message.getMsgId()).setResourcePath(message.getText()).setSendTime(message.getTimeString()).build();
-                reply = stub.imMessagePublish(data);
+                TalkCloudApp.ImMsgReqData data = TalkCloudApp.ImMsgReqData.newBuilder()
+                        .setId(userId)
+                        .setSenderName(message.getFromUser().getDisplayName())
+                        .setReceiverId(message.getReceiveId())
+                        .setReceiverType(2) //TODO 1是个人，2是群
+                        .setMsgType(1) //TODO 1是文字
+                        .setMsgCode(message.getMsgId())
+                        .setResourcePath(message.getText())
+                        .setSendTime(message.getTimeString())
+                        .build();
+
+                reply = GrpcConnectionManager.getInstance().getBlockingStub().imMessagePublish(data);
                 Log.d(TAG,TAG+" this is ChatTextTask doInBackground 2222 ...");
                 return reply;
             }catch (Exception e){
@@ -134,11 +132,6 @@ public class GroupControll {
         @Override
         protected void onPostExecute(TalkCloudApp.ImMsgRespData result) {
             super.onPostExecute(result);
-            try {
-                channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
 
             if(result!=null){
                 Log.d(TAG,TAG+" this is text onPostExecute code = "+result.getResult().getCode());
@@ -178,6 +171,7 @@ public class GroupControll {
                         .addFormDataPart("ReceiverName",message.getReceiveName())
                         .addFormDataPart("SendTime",message.getTimeString())
                         .build();
+
                 Request request = new Request.Builder()
                         .header("Authorization", "Client-ID " + UUID.randomUUID())
                         .url(UPLOAD_URL)

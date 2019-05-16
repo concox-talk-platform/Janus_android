@@ -67,6 +67,12 @@
             android:name=".im.activity.GroupChatActivity"
             android:label="@string/app_name">
         </activity>
+
+        <activity
+            android:name=".im.activity.SingleChatActivity"
+            android:label="@string/app_name">
+        </activity>
+
         <activity
             android:name=".im.activity.BrowserImageActivity"
             android:label="@string/app_name">

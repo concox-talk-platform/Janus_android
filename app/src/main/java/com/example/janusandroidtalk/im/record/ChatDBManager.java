@@ -42,6 +42,7 @@ public class ChatDBManager {
         cv.put("status",info.getMessageStatus().ordinal());
         cv.put("mediafilepath",info.getMediaFilePath());
         cv.put("duration",info.getDuration());
+        cv.put("record_timestamp", info.getTimestamp());
         long result = db.insert("chat_record",null,cv);
         Log.d("chat","chatrecord addRecord result = "+result);
         db.close();
@@ -49,7 +50,9 @@ public class ChatDBManager {
     }
 
     public void deleteAllRecord(){
-        db.delete("chat_record",null,null);
+        Log.d("chat","chatrecord truncate");
+        db.execSQL("Delete from chat_record");
+//        db.delete("chat_record",null,null);
     }
 
     /**
@@ -76,8 +79,10 @@ public class ChatDBManager {
             info.setMessageStatus(IMessage.MessageStatus.values()[status]);
             info.setMediaFilePath(cursor.getString(cursor.getColumnIndex("mediafilepath")));
             info.setDuration(cursor.getLong(cursor.getColumnIndex("duration")));
+            info.setTimestamp(cursor.getLong(cursor.getColumnIndex("record_timestamp")));
             infos.add(info);
-            Log.d("chat","chatrecord send_time="+info.getTimeString());
+            Log.d("chat","chatrecord send_timeStr="+info.getTimeString());
+            Log.d("chat","chatrecord record_timestamp="+info.getTimeString());
         }
         cursor.close();
         db.close();
@@ -103,7 +108,9 @@ public class ChatDBManager {
             info.setMessageStatus(IMessage.MessageStatus.values()[status]);
             info.setMediaFilePath(cursor.getString(cursor.getColumnIndex("mediafilepath")));
             info.setDuration(cursor.getLong(cursor.getColumnIndex("duration")));
-            Log.d("chat","chatrecord send_time="+info.getTimeString());
+            info.setTimestamp(cursor.getLong(cursor.getColumnIndex("record_timestamp")));
+            Log.d("chat","chatrecord send_timeStr="+info.getTimeString());
+            Log.d("chat","chatrecord record_timestamp="+info.getTimeString());
             //return info;
         }
         cursor.close();
@@ -130,7 +137,9 @@ public class ChatDBManager {
             info.setMessageStatus(IMessage.MessageStatus.values()[status]);
             info.setMediaFilePath(cursor.getString(cursor.getColumnIndex("mediafilepath")));
             info.setDuration(cursor.getLong(cursor.getColumnIndex("duration")));
-            Log.d("chat","chatrecord send_time="+info.getTimeString());
+            info.setTimestamp(cursor.getLong(cursor.getColumnIndex("record_timestamp")));
+            Log.d("chat","chatrecord send_timeStr="+info.getTimeString());
+            Log.d("chat","chatrecord record_timestamp="+info.getTimeString());
             //return info;
         }
         cursor.close();

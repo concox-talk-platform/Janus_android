@@ -8,6 +8,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import talk_cloud.TalkCloudApp;
 import talk_cloud.TalkCloudGrpc;
 
 public class GrpcConnectionManager {
@@ -15,6 +16,8 @@ public class GrpcConnectionManager {
     private ManagedChannel channel;
     // FIXME We chose bloking stub, maybe others better.
     private TalkCloudGrpc.TalkCloudBlockingStub blockingStub;
+    // FIXME IM chose new stub, maybe others better
+    private TalkCloudGrpc.TalkCloudStub stub;
     // TODO New single thread to handle short-time instant grpc request
     private ExecutorService grpcInstantRequestHandler;
     // TODO Simple schedule simple thread to update online state
@@ -23,6 +26,7 @@ public class GrpcConnectionManager {
     private GrpcConnectionManager() {
         channel = ManagedChannelBuilder.forAddress(AppTools.host, AppTools.port).usePlaintext().build();
         blockingStub = TalkCloudGrpc.newBlockingStub(channel);
+        stub = TalkCloudGrpc.newStub(channel);
 
         grpcInstantRequestHandler = Executors.newSingleThreadExecutor();
         onlineStateUpdater = Executors.newScheduledThreadPool(1);
@@ -30,6 +34,10 @@ public class GrpcConnectionManager {
 
     public TalkCloudGrpc.TalkCloudBlockingStub getBlockingStub() {
         return blockingStub;
+    }
+
+    public TalkCloudGrpc.TalkCloudStub getStub() {
+        return stub;
     }
 
     public ExecutorService getGrpcInstantRequestHandler() {

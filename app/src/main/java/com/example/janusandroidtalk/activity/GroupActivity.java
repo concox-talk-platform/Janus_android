@@ -60,9 +60,9 @@ public class GroupActivity extends AppCompatActivity implements MyControlCallBac
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
         if (!to.isAdded()) {
             if (from == null) {
-                transaction.add(R.id.frame_layout, to).show(to).commit();
+                transaction.add(R.id.activity_group_frame_layout, to).show(to).commit();
             } else {
-                transaction.hide(from).add(R.id.frame_layout, to).commitAllowingStateLoss();
+                transaction.hide(from).add(R.id.activity_group_frame_layout, to).commitAllowingStateLoss();
             }
         } else {
             transaction.hide(from).show(to).commit();

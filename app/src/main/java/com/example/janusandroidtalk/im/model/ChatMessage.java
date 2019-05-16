@@ -19,6 +19,15 @@ public class ChatMessage implements IMessage {
     private MessageStatus mMsgStatus = MessageStatus.CREATED;//发送的状态
     private int receiveId;//接收者id
     private String receiveName;//接收者名字
+    private long timestamp; //存储时间戳
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
 
     public ChatMessage() {
         this.id = UUID.randomUUID().getLeastSignificantBits();
@@ -149,6 +158,7 @@ public class ChatMessage implements IMessage {
                 ", progress='" + progress + '\'' +
                 ", mMsgStatus=" + mMsgStatus +
                 ", receiveId=" + receiveId +
+                ", record timestamp=" + timestamp +
                 '}';
     }
 }

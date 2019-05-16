@@ -3,6 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:descendantFocusability="blocksDescendants"
+    android:id="@+id/fragment_mine_list_item"
     android:orientation="vertical">
 
     <RelativeLayout
