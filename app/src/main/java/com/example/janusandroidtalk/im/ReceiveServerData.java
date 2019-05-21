@@ -13,8 +13,7 @@ import com.example.janusandroidtalk.im.record.ChatDBManager;
 import com.example.janusandroidtalk.im.utils.MediaUtil;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.text.SimpleDateFormat;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -63,7 +62,8 @@ public class ReceiveServerData extends Thread {
         chatMessage.setReceiveName(imMsgReqData.getSenderName());
         chatMessage.setTimeString(imMsgReqData.getSendTime());
         chatMessage.setUserInfo(new DefaultUser(imMsgReqData.getId() + "", imMsgReqData.getSenderName(), ""));
-        chatMessage.setTimestamp(System.currentTimeMillis());
+        chatMessage.setTimestamp(DateTimeFormat(chatMessage.getTimeString()) / 1000);
+        Log.d("ReceiveServerData", "this is transfer dateTimeStr " + chatMessage.getTimeString() + " to timestamp " + chatMessage.getTimestamp());
         int msgType = imMsgReqData.getMsgType();
         Log.d("ReceiveServerData", "this is streamObserver onNext and msgType = " + msgType);
 
@@ -83,26 +83,31 @@ public class ReceiveServerData extends Thread {
             String[] str = imMsgReqData.getResourcePath().split("/");
             Log.d(TAG, TAG + " this is StreamObserver receive text  destFileDir="+destFileDir);
             chatMessage.setMediaFilePath(destFileDir + "/" + str[str.length - 1]);
-
-            //图片、语音、视频
-            DownloadManager.getInstance().downloadFile(imMsgReqData.getResourcePath(), str[str.length - 1], chatMessage, new DownloadManager.OnDownloadListener() {
-                @Override
-                public void onDownloadSuccess(ChatMessage msg) {
-                    //下载成功
-                    msg.setDuration(MediaUtil.getDuration(new File(msg.getMediaFilePath())));
-                }
-
-                @Override
-                public void onDownloading(int progress) {
-                    //下载中
-                }
-
-                @Override
-                public void onDownloadFailed(ChatMessage msg) {
-                    //下载失败
-                }
-            });
         }
+    }
+
+    private void mediaFileHandler(ChatMessage chatMessage, TalkCloudApp.ImMsgReqData imMsgReqData) {
+        String[] str = imMsgReqData.getResourcePath().split("/");
+        //图片、语音、视频
+        DownloadManager.getInstance().downloadFile(imMsgReqData.getResourcePath(), str[str.length - 1], chatMessage, new DownloadManager.OnDownloadListener() {
+            @Override
+            public void onDownloadSuccess(ChatMessage msg) {
+                //下载成功
+                msg.setDuration(MediaUtil.getDuration(new File(msg.getMediaFilePath())));
+                long id = mDbManager.addRecord(msg);
+                sendReceiverBroadcast(id);
+            }
+
+            @Override
+            public void onDownloading(int progress) {
+                //下载中
+            }
+
+            @Override
+            public void onDownloadFailed(ChatMessage msg) {
+                //下载失败
+            }
+        });
     }
 
     private void singleOnlineImMsg(TalkCloudApp.ImMsgReqData imMsgReqData) {
@@ -112,9 +117,14 @@ public class ReceiveServerData extends Thread {
         if (imMsgReqData.getId() != UserBean.getUserBean().getUserId()) {
             ChatMessage chatMessage = new ChatMessage();
             initChatMessage(chatMessage, imMsgReqData);
-            chatMessage.setTimestamp(System.currentTimeMillis());
-            long id = mDbManager.addRecord(chatMessage);
-            sendReceiverBroadcast(id);
+
+            if (imMsgReqData.getMsgType() == MSG_TYPE_TEXT) {
+                long id = mDbManager.addRecord(chatMessage);
+                sendReceiverBroadcast(id);
+            }
+            else {
+                mediaFileHandler(chatMessage, imMsgReqData);
+            }
             Log.d("ReceiveServerData", "This is handleOnlineMessage receive single online message " + chatMessage.toString());
         }
     }
@@ -124,10 +134,14 @@ public class ReceiveServerData extends Thread {
         if (imMsgReqData.getId() != UserBean.getUserBean().getUserId()) {
             ChatMessage chatMessage = new ChatMessage();
             initChatMessage(chatMessage, imMsgReqData);
-            chatMessage.setTimestamp(System.currentTimeMillis());
-            long id = mDbManager.addRecord(chatMessage);
-            sendReceiverBroadcast(id);
-            Log.d("ReceiveServerData", "This is handleOnlineMessage receive single online message " + chatMessage.toString());
+            if (imMsgReqData.getMsgType() == MSG_TYPE_TEXT) {
+                long id = mDbManager.addRecord(chatMessage);
+                sendReceiverBroadcast(id);
+            }
+            else {
+                mediaFileHandler(chatMessage, imMsgReqData);
+            }
+            Log.d("ReceiveServerData", "This is handleOnlineMessage receive group online message " + chatMessage.toString());
         }
     }
 
@@ -139,18 +153,15 @@ public class ReceiveServerData extends Thread {
 
         // GroupChat online message
         if (value.getImMsgData().getReceiverType() == IM_MSG_TYPE_GROUP) {
-            for (int i = 0; i < UserBean.getUserBean().getUserGroupBeanArrayList().size(); i++) {
-                if (UserBean.getUserBean().getUserGroupBeanArrayList().get(i).getUserGroupId() == value.getImMsgData().getReceiverId()) {
+//            for (int i = 0; i < UserBean.getUserBean().getUserGroupBeanArrayList().size(); i++) {
+//                if (UserBean.getUserBean().getUserGroupBeanArrayList().get(i).getUserGroupId() == value.getImMsgData().getReceiverId()) {
                     groupOnlineImMsg(value.getImMsgData());
-                }
-            }
+//                }
+//            }
         }
     }
 
     private void singleOfflineImMsg(List<TalkCloudApp.OfflineImMsg> offlineImMsgsList) {
-        // TODO Message received needed to reverse
-        List<ChatMessage> offlineReceiver = new ArrayList<>();
-
         Log.d("ReceiveServerData", "This is handleOfflineMessage receive single offlineImMsgsList size = " + offlineImMsgsList.size());
         for (int i = 0; i < offlineImMsgsList.size(); i++) {
             List<TalkCloudApp.ImMsgReqData> imMsgReqDataList = offlineImMsgsList.get(i).getImMsgDataList();
@@ -160,38 +171,26 @@ public class ReceiveServerData extends Thread {
                     TalkCloudApp.ImMsgReqData imMsgReqData = imMsgReqDataList.get(j);
                     ChatMessage chatMessage = new ChatMessage();
                     initChatMessage(chatMessage, imMsgReqData);
-                    offlineReceiver.add(chatMessage);
+
+                    mDbManager.addRecord(chatMessage);
+                    Log.d("ReceiveServerData", "This is handleOfflineMessage receive single offline message " + chatMessage.toString());
                 }
             }
-        }
-
-        Collections.reverse(offlineReceiver);
-        for (ChatMessage chatMessage1 : offlineReceiver) {
-            chatMessage1.setTimestamp(System.currentTimeMillis());
-            mDbManager.addRecord(chatMessage1);
-            Log.d("ReceiveServerData", "This is handleOfflineMessage receive single offline message " + chatMessage1.toString());
         }
     }
 
     private void groupOfflineImMsg(List<TalkCloudApp.OfflineImMsg> offlineImMsgsList) {
-        // TODO Message received needed to reverse
-        List<ChatMessage> offlineReceiver = new ArrayList<>();
-
+        Log.d("ReceiveServerData", "This is handleOfflineMessage receive group offlineImMsgsList size = " + offlineImMsgsList.size());
         for (int i = 0; i < offlineImMsgsList.size(); i++) {
             List<talk_cloud.TalkCloudApp.ImMsgReqData> imMsgReqDataList = offlineImMsgsList.get(i).getImMsgDataList();
             for (int j = 0; j < imMsgReqDataList.size(); j++) {
                 TalkCloudApp.ImMsgReqData groupData = imMsgReqDataList.get(j);
                 ChatMessage chatMessage = new ChatMessage();
                 initChatMessage(chatMessage, groupData);
-                offlineReceiver.add(chatMessage);
-            }
-        }
 
-        Collections.reverse(offlineReceiver);
-        for (ChatMessage chatMessage1 : offlineReceiver) {
-            chatMessage1.setTimestamp(System.currentTimeMillis());
-            mDbManager.addRecord(chatMessage1);
-            Log.d("ReceiveServerData", "This is handleOfflineMessage receive group offline message " + chatMessage1.toString());
+                mDbManager.addRecord(chatMessage);
+                Log.d("ReceiveServerData", "This is handleOfflineMessage receive group offline message " + chatMessage.toString());
+            }
         }
     }
 
@@ -210,6 +209,24 @@ public class ReceiveServerData extends Thread {
         super.run();
         Log.d(TAG, TAG + " this is testing 0000000000000");
         mDbManager = new ChatDBManager(MyApplication.getContext());
+
+//        StreamObserver<TalkCloudApp.StreamRequest> offlineReq = new StreamObserver<TalkCloudApp.StreamRequest>() {
+//            @Override
+//            public void onNext(TalkCloudApp.StreamRequest value) {
+//
+//            }
+//
+//            @Override
+//            public void onError(Throwable t) {
+//
+//            }
+//
+//            @Override
+//            public void onCompleted() {
+//
+//            }
+//        };
+
         StreamObserver<TalkCloudApp.StreamResponse> response = new StreamObserver<TalkCloudApp.StreamResponse>() {
             @Override
             public void onNext(TalkCloudApp.StreamResponse value) {
@@ -239,6 +256,7 @@ public class ReceiveServerData extends Thread {
         };
 
         StreamObserver<TalkCloudApp.StreamRequest> request = GrpcConnectionManager.getInstance().getStub().dataPublish(response);
+
         Log.d(TAG, TAG + " this is testing 11111111111");
         try {
             Log.d(TAG, TAG + " this is testing 2222222222222222222 and uerid=" + UserBean.getUserBean().getUserId());
@@ -268,5 +286,26 @@ public class ReceiveServerData extends Thread {
     private void restart(){
         Log.d(TAG, TAG + " this is StreamObserver and restart --------------start");
         new ReceiveServerData().start();
+        try {
+            sleep(5*1000);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 时间字符串转换为时间戳
+     * @param dateTimeStr yyyy-MM-dd HH:mm:ss
+     * @return  timestamp long
+     */
+    private long DateTimeFormat(String dateTimeStr) {
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        try {
+            long timestamp = format.parse(dateTimeStr).getTime();
+            return timestamp;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return 0;
+        }
     }
 }

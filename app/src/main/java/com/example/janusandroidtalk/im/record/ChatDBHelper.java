@@ -10,7 +10,7 @@ public class ChatDBHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "ChatDBHelper";
     private static final String DATABASE_NAME = "record.db";
-    public static int DATABASE_VERSION = 7;
+    public static int DATABASE_VERSION = 2;
 
     public ChatDBHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);

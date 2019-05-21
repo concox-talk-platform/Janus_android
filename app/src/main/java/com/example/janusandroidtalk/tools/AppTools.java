@@ -13,11 +13,15 @@ import java.util.List;
 
 public class AppTools {
 
-    public static String host = "113.105.153.240";//外网
+    public static String host = "114.119.113.97";//外网
     //public static String host = "172.16.0.74";//内网
 
-
     public static int port = 9001;
+
+    /**
+     * 上传媒体文件的路径
+     */
+    public static String UPLOAD_URL = "https://test.jimilab.com:10000/upload";
 
     /*
      * 将时间戳转换为时间

@@ -65,9 +65,9 @@ public class ChatDBManager {
         db = helper.getReadableDatabase();
         Log.d("chat","chatrecord sendId = "+sendId+" receiveId="+receiveId);
         ArrayList<ChatMessage> infos = new ArrayList<ChatMessage>();
-        //Cursor cursor = db.rawQuery("select * from chat_record where send_id=? and receiveId=?",null,);
-        //Cursor cursor = db.query("chat_record",null,"send_id=? and receive_id=?",new String[]{sendId+"",receiveId+""},null,null,null);
-        Cursor cursor = db.query("chat_record",null,"receive_id=?",new String[]{receiveId+""},null,null,null);
+//        Cursor cursor = db.rawQuery("select * from chat_record where send_id=? and receiveId=?",null,);
+//        Cursor cursor = db.query("chat_record",null,"receive_id=?",new String[]{receiveId+""},null,null,null);
+        Cursor cursor = db.query("chat_record",null,"send_id=? and receive_id=?", new String[]{sendId+"", receiveId+""},null,null,null);
         while (cursor.moveToNext()){
             ChatMessage info = new ChatMessage();
             info.setUserInfo(new DefaultUser(cursor.getInt(cursor.getColumnIndex("send_id"))+"",cursor.getString(cursor.getColumnIndex("send_name")),""));
