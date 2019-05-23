@@ -31,6 +31,7 @@ import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
 import com.example.janusandroidtalk.grpcconnectionmanager.ToFragmentListener;
+import com.example.janusandroidtalk.im.activity.SingleChatActivity;
 import com.example.janusandroidtalk.pullrecyclerview.BaseRecyclerAdapter;
 import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
@@ -162,8 +163,7 @@ public class FragmentMine extends Fragment implements MyControlCallBack, ToFragm
     //TODO TEST!!!
     @Override
     public void dynamicTransfer(String message) {
-//        Log.d("test","--------------------------------------> this is test 好友自动刷新了！！！" + message);
-        Toast.makeText(getContext(), "好友自动刷新了！！！", Toast.LENGTH_SHORT).show();
+        Log.d("FragmentGroup", "好友自动刷新了！！！");
         handleUpdateFriendsInfoBack();
     }
 
@@ -281,6 +281,24 @@ public class FragmentMine extends Fragment implements MyControlCallBack, ToFragm
                             }).create();
                     dialog.show();
                 }
+            });
+
+            LinearLayout linearLayout = holder.getView(R.id.fragment_mine_list_item);
+//            linearLayout.setOnClickListener(new View.OnClickListener() {
+//                @Override
+//                public void onClick(View v) {
+//                    Intent intent = new Intent(getContext(), SingleChatActivity.class);
+//                    intent.putExtra("userid", data.getUserFriendId());
+//                    intent.putExtra("username", data.getUserFriendName());
+//                    startActivity(intent);
+//                }
+//            });
+
+            linearLayout.setOnClickListener(view -> {
+                Intent intent = new Intent(getContext(), SingleChatActivity.class);
+                intent.putExtra("userid", data.getUserFriendId());
+                intent.putExtra("username", data.getUserFriendName());
+                startActivity(intent);
             });
         }
     }

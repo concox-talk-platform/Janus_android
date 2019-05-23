@@ -11,6 +11,7 @@ import android.os.Message;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -27,6 +28,7 @@ import com.example.janusandroidtalk.bean.UserFriendBean;
 import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.dialog.CustomProgressDialog;
 import com.example.janusandroidtalk.grpcconnectionmanager.GrpcConnectionManager;
+import com.example.janusandroidtalk.im.activity.SingleChatActivity;
 import com.example.janusandroidtalk.pullrecyclerview.BaseRecyclerAdapter;
 import com.example.janusandroidtalk.pullrecyclerview.BaseViewHolder;
 import com.example.janusandroidtalk.pullrecyclerview.PullRecyclerView;
@@ -98,7 +100,7 @@ public class FragmentGroupMember extends Fragment{
         mPullRecyclerView = getActivity().findViewById(R.id.fragment_group_member_list_view);
         mPullRecyclerView.setLayoutManager(new XLinearLayoutManager(getActivity()));     // 设置LayoutManager
         mPullRecyclerView.setColorSchemeResources(R.color.colorMain);                    // 设置下拉刷新的旋转圆圈的颜色
-        groupMemberListAdapter = new GroupMemberListAdapter(getActivity(), R.layout.activity_group_member_list_item, groupMemberList);
+        groupMemberListAdapter = new GroupMemberListAdapter(getActivity(), R.layout.fragment_group_member_list_item, groupMemberList);
         mPullRecyclerView.setAdapter(groupMemberListAdapter);
 
         //第一次进来发起请求
@@ -165,7 +167,19 @@ public class FragmentGroupMember extends Fragment{
             holder.setText(R.id.group_member_list_item_state, data.getUserFriendId() + "");   // ID
             ImageView imageView_deleter = holder.getView(R.id.group_member_list_item_delete);       // Deleter
 
-//            LinearLayout linearLayout = holder.getView(R.layout.activity_group_member_list_item);   // TODO Add onClickListener later
+            LinearLayout linearLayout = holder.getView(R.id.fragment_group_member_list_item);
+            if (data.getUserFriendId() != UserBean.getUserBean().getUserId())
+            {
+                linearLayout.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        Intent intent = new Intent(getContext(), SingleChatActivity.class);
+                        intent.putExtra("userid", data.getUserFriendId());
+                        intent.putExtra("username", data.getUserFriendName());
+                        startActivity(intent);
+                    }
+                });
+            }
 
             if (data.getOnline() == 2) {
                 imageView_portrait.setImageResource(R.drawable.ic_group_member_portrait_black_24dp);
@@ -198,11 +212,7 @@ public class FragmentGroupMember extends Fragment{
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
                         dialog.dismiss();
-                        //Todo 调用删除群组成员接口
-//                        groupDeleteMember(deleteUserId);
-                        Toast.makeText(getContext(), "do in back", Toast.LENGTH_SHORT).show();
                         handleGroupDeleteMemberBack(deleteUserId);
-                        Toast.makeText(getContext(), "done", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .setNegativeButton(R.string.dialog_cancel, new DialogInterface.OnClickListener() {
@@ -260,7 +270,7 @@ public class FragmentGroupMember extends Fragment{
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(resultCode == RESULT_OK && requestCode == 1000){
-            Toast.makeText(getContext(), "onActivityResult", Toast.LENGTH_SHORT).show();
+            Log.d("FragmentGroupMember", "This is OnActivityResult");
             currentGroup = UserBean.getUserBean().getUserGroupBeanArrayList().get(groupPosition);
             groupMemberList.clear();
             groupMemberList.addAll(currentGroup.getUserFriendBeanArrayList());

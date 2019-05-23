@@ -42,17 +42,17 @@ public class LocationService extends Service {
             super.handleMessage(msg);
             switch (msg.what) {
                 case 1:
-
-                    DeviceInfo deviceInfo = mDeviceControll.getDeviceDetail(LocationService.this);
-                    GPSInfo gpsInfo = mGPSControll.getCurrentLocationInfo();
-                    WifiData wifiData = mWifiControll.getWifiData();
-                    BaseStationInfo bsInfo = mTelephonyControll.getGSMCellLocationInfo();
-                    BluetoothInfo btInfo = mBluetoothControll.getBluetoothStrength();
-                    Log.d("location","LocationService gpsinfo="+gpsInfo);
-                    //gps数据为空时，不上传数据
-                    if(gpsInfo!=null){
-                        new GrpcLocationTask().execute(getLocationData(deviceInfo,gpsInfo,wifiData,bsInfo,btInfo));
-                    }
+                    //FIXME 需要檢測一下GPS數據是否為空再上傳
+//                    DeviceInfo deviceInfo = mDeviceControll.getDeviceDetail(LocationService.this);
+//                    GPSInfo gpsInfo = mGPSControll.getCurrentLocationInfo();
+//                    WifiData wifiData = mWifiControll.getWifiData();
+//                    BaseStationInfo bsInfo = mTelephonyControll.getGSMCellLocationInfo();
+//                    BluetoothInfo btInfo = mBluetoothControll.getBluetoothStrength();
+//                    Log.d("location","LocationService gpsinfo="+gpsInfo);
+//                    //gps数据为空时，不上传数据
+//                    if(gpsInfo!=null){
+//                        new GrpcLocationTask().execute(getLocationData(deviceInfo,gpsInfo,wifiData,bsInfo,btInfo));
+//                    }
                     mHandler.sendEmptyMessageDelayed(1, LOCATION_SEND_TIME);
                     break;
             }

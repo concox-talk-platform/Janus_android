@@ -19,6 +19,33 @@ public class ChatMessage implements IMessage {
     private MessageStatus mMsgStatus = MessageStatus.CREATED;//发送的状态
     private int receiveId;//接收者id
     private String receiveName;//接收者名字
+    private long timestamp; //存储时间戳
+    private int messageType; //1文本2媒体
+    private int receiverType; //1个人2群组
+
+    public int getReceiverType() {
+        return receiverType;
+    }
+
+    public void setReceiverType(int receiverType) {
+        this.receiverType = receiverType;
+    }
+
+    public int getMessageType() {
+        return messageType;
+    }
+
+    public void setMessageType(int messageType) {
+        this.messageType = messageType;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
 
     public ChatMessage() {
         this.id = UUID.randomUUID().getLeastSignificantBits();
@@ -143,12 +170,15 @@ public class ChatMessage implements IMessage {
                 ", text='" + text + '\'' +
                 ", timeString='" + timeString + '\'' +
                 ", type=" + type +
+                ", message type=" + messageType +
                 ", user=" + user +
                 ", mediaFilePath='" + mediaFilePath + '\'' +
                 ", duration=" + duration +
                 ", progress='" + progress + '\'' +
                 ", mMsgStatus=" + mMsgStatus +
                 ", receiveId=" + receiveId +
+                ", receiverType=" + receiverType +
+                ", record timestamp=" + timestamp +
                 '}';
     }
 }

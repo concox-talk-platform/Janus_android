@@ -24,7 +24,6 @@ import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
-import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.RequestOptions;
@@ -32,10 +31,11 @@ import com.bumptech.glide.request.target.SimpleTarget;
 import com.bumptech.glide.request.transition.Transition;
 import com.example.janusandroidtalk.R;
 import com.example.janusandroidtalk.bean.UserBean;
+import com.example.janusandroidtalk.bean.UserFriendBean;
+import com.example.janusandroidtalk.bean.UserGroupBean;
 import com.example.janusandroidtalk.floatwindow.FloatActionController;
+import com.example.janusandroidtalk.im.SendControll;
 import com.example.janusandroidtalk.im.view.ChatUiHelper;
-import com.example.janusandroidtalk.im.GroupControll;
-import com.example.janusandroidtalk.im.model.GroupInfo;
 import com.example.janusandroidtalk.im.utils.PictureFileUtil;
 import com.example.janusandroidtalk.im.model.DefaultUser;
 import com.example.janusandroidtalk.im.model.ChatMessage;
@@ -49,6 +49,7 @@ import com.luck.picture.lib.entity.LocalMedia;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -93,8 +94,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
     private ArrayList<String> mMsgIdList = new ArrayList<>();
 
     private ChatDBManager mDbManager;
-    private GroupControll mGroupControll;
-    private GroupInfo mCurrentGroupInfo;
+    private SendControll sendControll;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -137,27 +137,22 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         mRlPhoto.setOnClickListener(this);
         mRlVedio.setOnClickListener(this);
         mRlFile.setOnClickListener(this);
-        mGroupControll = new GroupControll();
-        mGroupControll.setOnGroupInfoListener(new GroupControll.OnGroupInfoListener() {
+
+        sendControll = new SendControll();
+        sendControll.setSendCallbackListener(new SendControll.OnSendCallbackListener() {
             @Override
-            public void OnGroupInfo(GroupInfo info) {
-                Log.d(TAG,TAG+" this is OnGroupInfo ...");
-                mCurrentGroupInfo = info;
+            public void OnTextMsg(boolean flag, String msgId) {
+                Log.d("GroupChatActivity", "this is onSendCallbackListener onTextMsg = " + flag + " msgId = " + msgId);
+                modifyMsgStatus(flag, msgId);//更新文字的发送状态
             }
 
             @Override
-            public void OnTextMsg(boolean b,String msgId) {
-                Log.d(TAG,TAG+" this is OnGroupInfo OnTextMsg = "+b+" msgId="+msgId);
-                modifyMsgStatus(b,msgId);//更新文字的发送状态
-            }
-
-            @Override
-            public void OnMediaMsg(boolean b, String msgId) {
-                Log.d(TAG,TAG+" this is OnGroupInfo OnMediaMsg = "+b+" msgId="+msgId);
-                modifyMsgStatus(b,msgId);//更新图片、语音、视频的发送状态
+            public void OnMediaMsg(boolean flag, String msgId) {
+                Log.d("GroupChatActivity", "this is onSendCallbackListener onTextMsg = " + flag + " msgId = " + msgId);
+                modifyMsgStatus(flag, msgId);//更新图片、语音、视频的发送状态
             }
         });
-        mGroupControll.getGroupInfo(mUserGroupId,UserBean.getUserBean().getUserId());
+
     }
 
     /**
@@ -229,7 +224,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
                 //录音结束回调
                 File file = new File(audioPath);
                 if (file.exists()) {
-                    sendAudioMessage(audioPath, time);
+                    sendChatMessage(audioPath, time, IMessage.MessageType.SEND_VOICE.ordinal(), SendControll.RECEIVER_TYPE_GROUP);
                 }
             }
         });
@@ -249,15 +244,29 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
      * @return
      */
     private List<ChatMessage> getMessages() {
-        List<ChatMessage> list = mDbManager.getRecord(UserBean.getUserBean().getUserId(), mUserGroupId);
-        Log.d(TAG, TAG+" chatrecord list=" + list.size());
-        for (int i=0;i<list.size();i++){
-            if(list.get(i).getType()==IMessage.MessageType.RECEIVE_IMAGE.ordinal()||list.get(i).getType()==IMessage.MessageType.SEND_IMAGE.ordinal()){
-                mPathList.add(list.get(i).getMediaFilePath());
-                mMsgIdList.add(list.get(i).getMsgId());
+        ArrayList<ChatMessage> chatMessagesHistory = new ArrayList<>();
+
+        for (int i = 0; i < UserBean.getUserBean().getUserGroupBeanArrayList().size(); i++) {
+            if (UserBean.getUserBean().getUserGroupBeanArrayList().get(i).getUserGroupId() == mUserGroupId) {
+                UserGroupBean userGroupBean = UserBean.getUserBean().getUserGroupBeanArrayList().get(i);
+                for (int j = 0; j < userGroupBean.getUserFriendBeanArrayList().size(); j++) {
+                    UserFriendBean userFriendBean = userGroupBean.getUserFriendBeanArrayList().get(j);
+                    chatMessagesHistory.addAll(mDbManager.getRecord(userFriendBean.getUserFriendId(), mUserGroupId));
+                }
+                break;
             }
         }
-        return list;
+        Collections.sort(chatMessagesHistory, (chatMessage1, chatMessage2)->{return (int)(chatMessage1.getTimestamp() - chatMessage2.getTimestamp());});
+
+        for (int k = 0;  k < chatMessagesHistory.size(); k++) {
+            if (chatMessagesHistory.get(k).getType() == IMessage.MessageType.RECEIVE_IMAGE.ordinal()
+                    || chatMessagesHistory.get(k).getType() == IMessage.MessageType.SEND_IMAGE.ordinal()) {
+                mPathList.add(chatMessagesHistory.get(k).getMediaFilePath());
+                mMsgIdList.add(chatMessagesHistory.get(k).getMsgId());
+            }
+        }
+
+        return chatMessagesHistory;
     }
 
     private void initMsgAdapter() {
@@ -514,7 +523,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
         switch (v.getId()) {
             case R.id.btn_send:
                 //发送文字,同时清空编辑框
-                sendTextMsg(mEtContent.getText().toString());
+                sendChatMessage(mEtContent.getText().toString(), 0, IMessage.MessageType.SEND_TEXT.ordinal(), SendControll.RECEIVER_TYPE_GROUP);
                 mEtContent.setText("");
                 break;
             case R.id.rlPhoto:
@@ -534,81 +543,39 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
     }
 
     /**
-     *  发送文字
-     * @param text
+     * Unified method to send chat message
+     * @param content if messageType is TEXT content or MEDIA path
+     * @param duration VIDEO or VOICE file duration
+     * @param messageType SEND_TEXT or SEND_VIDEO or SEND_VOICE ...
+     * @param receiverType GROUP or SINGLE
      */
-    private void sendTextMsg(String text) {
-        ChatMessage textMessage = new ChatMessage();
-        textMessage.setText(text);
-        textMessage.setType(IMessage.MessageType.SEND_TEXT.ordinal());
-        textMessage.setUserInfo(new DefaultUser(UserBean.getUserBean().getUserId() + "", UserBean.getUserBean().getUserName(), ""));
-        textMessage.setTimeString(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
-        textMessage.setReceiveId(mUserGroupId);
-        mAdapter.addToStart(textMessage, true);
-        mDbManager.addRecord(textMessage);
-        //Toast.makeText(this, "发送文本", Toast.LENGTH_SHORT).show();
-        new GroupControll.ChatTextTask().execute(textMessage);
-    }
+    private void sendChatMessage(String content, long duration, int messageType, int receiverType) {
+        ChatMessage chatMessage = new ChatMessage();
+        chatMessage.setText(content);
+        chatMessage.setReceiveName(mUserGroupName);
+        chatMessage.setReceiveId(mUserGroupId);
+        chatMessage.setReceiverType(receiverType);
+        chatMessage.setType(messageType);
+        chatMessage.setUserInfo(new DefaultUser(UserBean.getUserBean().getUserId() + "", UserBean.getUserBean().getUserName(), ""));
+        chatMessage.setTimeString(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));//FIXME repalce by GMT
+        chatMessage.setTimestamp(System.currentTimeMillis() / 1000);
+        chatMessage.setMediaFilePath(content);
+        chatMessage.setDuration(duration);
+        if (messageType == IMessage.MessageType.SEND_TEXT.ordinal()) {
+            chatMessage.setMessageType(SendControll.MSG_TYPE_TEXT);
+        }
 
-    /**
-     * 发送语音
-     * @param path
-     * @param time
-     */
-    private void sendAudioMessage(String path, int time) {
-        ChatMessage voiceMessage = new ChatMessage();
-        voiceMessage.setType(IMessage.MessageType.SEND_VOICE.ordinal());
-        voiceMessage.setUserInfo(new DefaultUser(UserBean.getUserBean().getUserId() + "", UserBean.getUserBean().getUserName(), ""));
-        voiceMessage.setTimeString(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
-        voiceMessage.setMediaFilePath(path);
-        voiceMessage.setDuration(time);
-        voiceMessage.setReceiveId(mUserGroupId);
-        voiceMessage.setReceiveName(mUserGroupName);
-        mAdapter.addToStart(voiceMessage, true);
-        mDbManager.addRecord(voiceMessage);
-        //Toast.makeText(this, "发送语音", Toast.LENGTH_SHORT).show();
-        new GroupControll.ChatTask().execute(voiceMessage);
-    }
+        if (messageType == IMessage.MessageType.SEND_IMAGE.ordinal()
+                || messageType == IMessage.MessageType.SEND_VIDEO.ordinal()
+                || messageType == IMessage.MessageType.SEND_VOICE.ordinal()) {
+            chatMessage.setMessageType(SendControll.MSG_TYPE_MEDIA);
+        }
 
-    /**
-     * 发送图片
-     * @param path
-     */
-    private void sendImageMessage(String path) {
-        ChatMessage imageMessage = new ChatMessage();
-        imageMessage.setType(IMessage.MessageType.SEND_IMAGE.ordinal());
-        imageMessage.setUserInfo(new DefaultUser(UserBean.getUserBean().getUserId() + "", UserBean.getUserBean().getUserName(), ""));
-        imageMessage.setTimeString(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
-        imageMessage.setMediaFilePath(path);
-        mPathList.add(path);
-        mMsgIdList.add(imageMessage.getMsgId());
-        imageMessage.setReceiveId(mUserGroupId);
-        imageMessage.setReceiveName(mUserGroupName);
-        mAdapter.addToStart(imageMessage, true);
-        mDbManager.addRecord(imageMessage);
-        //Toast.makeText(this, "发送图片 msgid="+imageMessage.getMsgId(), Toast.LENGTH_SHORT).show();
-        new GroupControll.ChatTask().execute(imageMessage);
-    }
+        // Local record and rendering
+        mAdapter.addToStart(chatMessage, true);
+        mDbManager.addRecord(chatMessage);
 
-    /**
-     * 发送视频
-     * @param path
-     * @param duration
-     */
-    private void sendVedioMessage(String path, long duration) {
-        //Toast.makeText(this, "video duration=" + duration, Toast.LENGTH_SHORT).show();
-        ChatMessage vedioMessage = new ChatMessage();
-        vedioMessage.setType(IMessage.MessageType.SEND_VIDEO.ordinal());
-        vedioMessage.setUserInfo(new DefaultUser(UserBean.getUserBean().getUserId() + "", UserBean.getUserBean().getUserName(), ""));
-        vedioMessage.setTimeString(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date()));
-        vedioMessage.setDuration(duration);
-        vedioMessage.setMediaFilePath(path);
-        vedioMessage.setReceiveId(mUserGroupId);
-        vedioMessage.setReceiveName(mUserGroupName);
-        mAdapter.addToStart(vedioMessage, true);
-        mDbManager.addRecord(vedioMessage);
-        //Toast.makeText(this, "发送视频", Toast.LENGTH_SHORT).show();
-        new GroupControll.ChatTask().execute(vedioMessage);
+        SendControll.sendMessage(chatMessage);
     }
 
     @Override
@@ -624,7 +591,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
                     // 图片选择结果回调
                     List<LocalMedia> selectListPic = PictureSelector.obtainMultipleResult(data);
                     for (LocalMedia media : selectListPic) {
-                        sendImageMessage(media.getPath());
+                        sendChatMessage(media.getPath(), 0, IMessage.MessageType.SEND_IMAGE.ordinal(), SendControll.RECEIVER_TYPE_GROUP);
                     }
                     break;
                 case REQUEST_CODE_VEDIO:
@@ -632,7 +599,7 @@ public class GroupChatActivity extends Activity implements View.OnTouchListener,
                     List<LocalMedia> selectListVideo = PictureSelector.obtainMultipleResult(data);
                     for (LocalMedia media : selectListVideo) {
                         Log.d(TAG, TAG + " duration=" + media.getDuration());
-                        sendVedioMessage(media.getPath(), media.getDuration() / 1000);
+                        sendChatMessage(media.getPath(), media.getDuration() / 1000, IMessage.MessageType.SEND_VIDEO.ordinal(), SendControll.RECEIVER_TYPE_GROUP);
                     }
                     break;
             }
