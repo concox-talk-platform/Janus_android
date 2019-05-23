@@ -43,7 +43,6 @@ public class AppTools {
         ArrayList<ActivityManager.RunningServiceInfo> runningService = (ArrayList<ActivityManager.RunningServiceInfo>) myManager
                 .getRunningServices(30);
         for (int i = 0; i < runningService.size(); i++) {
-            Log.e("wocaonima",runningService.get(i).service.getClassName().toString());
             if (runningService.get(i).service.getClassName().toString()
                     .equals(ServiceName)) {
                 return true;
